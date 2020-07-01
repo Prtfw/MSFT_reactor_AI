@@ -36,6 +36,14 @@ h1 {
     text-shadow: 4px 4px 16px black;
 }
 
+h2 {
+    color: white;
+    font-size: 65pt;
+    font-family: "Tahoma";
+    text-shadow: 4px 4px 16px black;
+
+}
+
 h3 {
     color: white;
     margin-top: 0px;
@@ -45,10 +53,12 @@ h3 {
 }
 
 #uploaded-image {
-    height: 384px;
+    height: 390px;
+    width: 497px;
+    
 }
 
-#upload-button {
+#upload-button, #submit-url-button {
     width: 256px;
     height: 64px;
     font-size: 20px;
@@ -63,3 +73,22 @@ h3 {
     display: block;
     margin: 32px auto;
 }
+
+#upload-url {
+    width: 100%;
+    padding: 12px 20px;
+    margin: 8px 0;
+    box-sizing: border-box;
+  }
+
+  #web_url {
+    width: 100%;
+    padding: 12px 20px;
+    margin: 8px 0;
+    box-sizing: border-box;
+    border: 3px solid rgb(36, 167, 219);
+    height: 50px;
+  }
+
+
+

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <%- include('partials/header.ejs') %>
+</head>
+
+<body>
+    <div id="banner">
+        <%- include('partials/banner.ejs') %>
+        <div class="container text-center">
+            <h1>Contoso Travel</h1>
+            <h3>Paste in an image URL containing signage and let us translate it for you!</h3>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12 text-center">
+                
+                <form method="POST" action="/translate_url" name ="frm">
+
+                <select id="target_language" class="form-control" name="target_language">
+                    <% target_language_dictionary.forEach(function(language){ %>
+                        <option value ="<%= language.value %>"><%= language.key %></option>
+                        <% }) %>
+                </select>
+
+                <input type="url" class="form-control" id="web_url" name="web_url" placeholder="Add image url here">
+                <input type="submit" id="submit-url-button" class="btn" value="Load URL image"  >
+
+                  
+                    <div style="display: none">
+                        <input type="url" id="upload-url" name="url" accept=".jpg,.jpeg,.png,.gif" placeholder="Add image url here">
+                    </div>
+
+                    <div style="display: none">
+                        <input type="submit" id="submit-url-button" value="Upload">
+                    </div>
+                                
+                    <div style="display: none">
+                        <img id="uploaded-image-url" >
+                        <input type="button" id="upload-url-button" class="btn" value="Load URL image">
+                    </div>
+                    <img id="uploaded-image" src="<%= web_url %>">
+                
+                </form>
+            </div>
+        </div>
+    </div>
+    
+ 
+    <div class="container">
+        <%- include('partials/modal.ejs') %>
+    </div>
+
+ 
+    <script type="text/javascript">
+    // Show modal/pop up with translated text
+    var result = "<%= result %>"
+    if(result == ''){
+        $("#myModal").modal("hide");
+    }
+   else{
+    body = $(".modal-body");
+    body.empty();
+
+    body.append("<h4>" + result + "</h4>");
+        
+    $("#myModal").modal("show");
+
+   }
+
+    </script>
+
+<script type="text/javascript">
+    $(function () {
+        $("#upload-url-button").click(function () {
+            $("#upload-url").click();
+        });
+        $("#upload-url").change(function () {
+            $("#submit-url-button").click();
+        });
+    });
+</script>
+ 
+</body>
+
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <%- include('partials/header.ejs') %>
+</head>
+
+<body>
+    <div id="banner">
+        <div id="menu">
+            <div class="container">
+                <div class="row">
+                    <ul>
+                        <li class="selected">home</li>
+                        <li>flights</li>
+                        <li>hotels</li>
+                        <li>cars</li>
+                        <li>cruises</li>
+                        <li>passports</li>
+                        <li>visas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% block header %}{% endblock %}
+    </div>
+    
+
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12 text-center">
+                
+                <form method="POST" enctype="multipart/form-data" name ="frm">
+                
+                    <!--
+                    <div style="display: none">
+                        <input type="file" id="upload-file" name="file" accept=".jpg,.jpeg,.png,.gif">
+                        <input type="submit" id="submit-button" value="Upload">
+                    </div>-->
+
+                {% block optional_form %}
+                {% endblock %}
+                  <!--<div style="display: none">
+                    <input type="url" id="upload-url" name="url" accept=".jpg,.jpeg,.png,.gif" placeholder="Add image url here">
+                </div>
+
+                <div style="display: none">
+                    <input type="submit" id="submit-url-button" value="Upload">
+                </div>
+
+                
+                <div style="display: none">
+                    <img id="uploaded-image-url" >
+                    <input type="button" id="upload-url-button" class="btn" value="Load URL image">
+                </div>-->
+                
+                <!--
+                    <img id="uploaded-image" src="{{ image_uri }}">
+                    <input type="button" id="upload-button" class="btn" value="Upload Photo">
+                    </div>-->
+                </form>
+            
+            </div>
+        </div>
+    </div>
+
+    {# Modal dialog box for outputting messages #}
+    <div class="container">
+        <div class="row">
+            <div id="myModal" class="modal fade" role="dialog">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            <h4 class="modal-title">Result</h4>
+                        </div>
+                        <div class="modal-body"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Script for displaying modal if messages are present #}
+    {% if messages and (messages | length) > 0 %}
+    <script type="text/javascript">
+        // If messages are queued up, show them in a modal dialog
+        var messages = {{messages | safe }};
+        console.log(96)
+        //var messages = {messages};
+        
+        body = $(".modal-body");
+        body.empty();
+
+        for (i = 0; i < messages.length; i++) {
+            body.append("<h2>" + messages[i] + "</h2>");
+        }
+
+        $("#myModal").modal("show");
+
+
+    </script>
+    {% endif %}
+
+
+    {# Script for automatically uploading images #}
+    <script type="text/javascript">
+        $(function () {
+
+            $("#upload-button").click(function () {
+                $("#upload-file").click();
+            });
+
+            $("#upload-file").change(function () {
+                $("#submit-button").click();
+            });
+
+
+            $("#upload-url-button").click(function () {
+                $("#upload-url").click();
+            });
+
+            $("#upload-url").change(function () {
+                $("#submit-url-button").click();
+            });
+
+
+        });
+    </script>
+
+    {% block optional_scripts %}
+    {% endblock %}
+</body>
+
+</html>

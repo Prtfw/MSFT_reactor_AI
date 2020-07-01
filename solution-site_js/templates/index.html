@@ -6,7 +6,7 @@
     <title>Contoso Travel</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
         integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-    <link rel="stylesheet" href="/static/main.css">
+        <link rel="stylesheet" href="/static/main.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
         integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
@@ -30,13 +30,19 @@
                 </div>
             </div>
         </div>
+        <div class="container text-center">
+            <h2>Welcome to Contoso Travel!</h2>
+        </div>
     </div>
-    
+
     <div class="jumbotron">
         <div class="container">
-            <h1>Welcome to Contoso Travel!</h1>
+            <!-- <h1>Welcome to Contoso Travel!</h1> -->
             <p>
-                <a class="btn btn-primary btn-lg" href="translate">Translate a sign</a>
+                <a class="btn btn-primary btn-lg" href="translate_upload">Translate a sign with an uploaded image</a>
+            </p>
+            <p>
+                <a class="btn btn-primary btn-lg" href="translate_url">Translate a sign with an image URL</a>
             </p>
             <p>
                 <a class="btn btn-primary btn-lg" href="train">Tell us what someone looks like</a>
@@ -46,7 +52,7 @@
             </p>
         </div>
     </div>
-    
+
 </body>
 
 </html>

@@ -30,26 +30,39 @@
                 </div>
             </div>
         </div>
-        {% block header %}{% endblock %}
+
+        <div class="container text-center">
+            <h1>Contoso Travel</h1>
+            <h3>Paste an image URL and detect a landmark!</h3>
+        </div>
+        
     </div>
 
     <div class="container">
         <div class="row">
             <div class="col-sm-12 text-center">
-                <form method="POST" enctype="multipart/form-data">
+                
+                <form method="POST" enctype="multipart/form-data" name ="frm">
+
+                
+                <input type="text" class="form-control" id="landmark_url" name="landmark_url" placeholder="Add image url here">
+                    <input type="submit" id="submit-url-button" value="Upload image URL">
+                    
+                    
+                    <img id="uploaded-image" src="{{ image_uri }}" >
+                        
                     <div style="display: none">
-                        <input type="file" id="upload-file" name="file" accept=".jpg,.jpeg,.png,.gif">
-                        <input type="submit" id="submit-button" value="Upload">
+                        <input type="button" id="upload-url-button" class="btn" value="Load URL image">
                     </div>
-                    {% block optional_form %}{% endblock %}
-                    <img id="uploaded-image" src="{{ image_uri }}">
-                    <input type="button" id="upload-button" class="btn" value="Upload Photo">
+                
+              
                 </form>
+            
             </div>
         </div>
     </div>
 
-    {# Modal dialog box for outputting messages #}
+    
     <div class="container">
         <div class="row">
             <div id="myModal" class="modal fade" role="dialog">
@@ -66,11 +79,13 @@
         </div>
     </div>
 
-    {# Script for displaying modal if messages are present #}
-    {% if messages and (messages | length) > 0 %}
+  
     <script type="text/javascript">
         // If messages are queued up, show them in a modal dialog
-        var messages = {{ messages | safe }};
+        var messages = {{messages | safe }};
+        console.log(96)
+        //var messages = {messages};
+        
         body = $(".modal-body");
         body.empty();
 
@@ -79,24 +94,30 @@
         }
 
         $("#myModal").modal("show");
-    </script>
-    {% endif %}
 
-    {# Script for automatically uploading images #}
+
+    </script>
+   
     <script type="text/javascript">
         $(function () {
-            $("#upload-button").click(function () {
-                $("#upload-file").click();
+
+            $("#upload-url-button").click(function () {
+                $("#upload-url").click();
             });
 
-            $("#upload-file").change(function () {
-                $("#submit-button").click();
+            $("#upload-url").change(function () {
+                $("#submit-url-button").click();
             });
+
+
         });
     </script>
 
-    {% block optional_scripts %}
-    {% endblock %}
+    
+    <script>
+        $("#landmark_url").val("{{ landmark_url }}");
+    </script>
+    
 </body>
 
 </html>
