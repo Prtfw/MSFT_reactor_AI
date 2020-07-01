@@ -5,7 +5,7 @@ To follow along with the exercises which make up this workshop, you will need a 
 - An [Azure](https://azure.microsoft.com/) account
 - [Git](https://git-scm.com/)
 - [Python](https://python.org)
-- A code editor, such as [Visual Studio Code](https://code.visualstudio.com/) with the [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) installed.
+- A code editor, such as [Visual Studio Codespaces](https://visualstudio.microsoft.com/services/visual-studio-codespaces/) (<=recommended cloud editor) or [Visual Studio Code](https://code.visualstudio.com/) with the [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) installed.
 - (Optional) [Azure Command Line Interface (CLI)](https://docs.microsoft.com/cli/azure/install-azure-cli?view=azure-cli-latest), a command line tool for managing Azure resources. You can also access the CLI without having to perform a local installation by navigating to [Azure Shell](https://shell.azure.com).
 
 If you have all of those utilities installed, you can skip ahead to [obtaining the starter site](./starting-site.md).
