@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+        <%- include('partials/header.ejs') %>
+      </head>
+
+<body>
+    <div id="banner">
+        <%- include('partials/banner.ejs') %>
+        <div class="container text-center">
+            <h1>Contoso Travel</h1>
+            <h3>Upload an image containing signage and let us translate it for you!</h3>
+        </div>
+    </div>
+    
+    <div class="container">
+                <%= typeof msg != 'undefined' ? msg : '' %>
+
+        <div class="row">
+            <div class="col-sm-12 text-center">
+                
+                
+                <form action="/translate_upload" method="POST" enctype="multipart/form-data">
+
+                    <select id="target_language" class="form-control" name="target_language">
+                        <% target_language_dictionary.forEach(function(language){ %>
+                            <option value ="<%= language.value %>"><%= language.key %></option>
+                            <% }) %>
+                    </select>
+
+                    <div style="display: none">
+                        <input type="file" id="upload-file" name="myImage" accept=".jpg,.jpeg,.png,.gif">
+                        <input type="submit" id="submit-button" value="Upload">
+                    </div>
+
+                    <img id="uploaded-image" src="<%= image_file %>">
+                    <input type="button" id="upload-button" class="btn" value="Upload Photo">
+                  </form>
+            </div>
+        </div>
+    </div>
+    
+ 
+    <div class="container">
+        <%- include('partials/modal.ejs') %>
+    </div>
+
+ 
+    <script type="text/javascript">
+    // Show modal/pop up with translated text
+    var result = "<%= result %>"
+    if(result == ''){
+        $("#myModal").modal("hide");
+    }
+   else{
+    body = $(".modal-body");
+    body.empty();
+
+    body.append("<h4>" + result + "</h4>");
+        
+    $("#myModal").modal("show");
+
+   }
+
+    </script>
+
+<script type="text/javascript">
+         $(function () {
+            $("#upload-button").click(function () {
+                $("#upload-file").click();
+            });
+
+            $("#upload-file").change(function () {
+                $("#submit-button").click();
+            });
+        });
+</script>
+ 
+</body>
+
+</html>

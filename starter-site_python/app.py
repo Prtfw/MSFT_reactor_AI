@@ -271,6 +271,8 @@ def translate_image_url():
 
             # Add code to retrieve text from picture
 
+
+
             #params set translation params
             params = '&to='+target_language
 
