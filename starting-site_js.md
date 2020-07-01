@@ -1,6 +1,6 @@
 # Starter site
 
-We'll be adding functionality to an existing website, which represents our client, Contoso Travel. Contoso Travel is working to enable travelers to translate street signs and identify who is in a picture. You'll add functionality to three separate sections of the website - **translate** for sign translation, **train** for training the application to cruise ships, and finally **detect** to identify cruise ships.
+We'll be adding functionality to an existing website, which represents our client, Contoso Travel. Contoso Travel is working to enable travelers to translate street signs and identify who is in a picture. You'll add functionality to three separate sections of the website - **translate** for sign translation, **train** for training the application to detect faces, and finally **detect** to identify faces.
 
 ## Obtaining the starter site
 
@@ -22,10 +22,10 @@ git clone https://github.com/microsoft/reactors
 
 ``` console
 # Windows
-cd reactors\AI_1\starter-site_python
+cd reactors\AI_1\starter-site
 
 # Linux or macOS
-cd ./reactors/AI_1/starter-site_python
+cd ./reactors/AI_1/starter-site
 ```
 
 2. Let's create a virtual environment for the packages we'll be using. Virtual environments allow us to separate packages from other environments. Return to the command line and issuing the following command:
