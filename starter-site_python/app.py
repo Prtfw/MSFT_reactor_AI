@@ -28,8 +28,6 @@ from io import BytesIO
 import pprint
 from pprint import pprint
 
-
-app = Flask(__name__)
 #---------------------------------------------------------------------------------------------------------------------#
 # Load keys and urls
 
@@ -181,30 +179,22 @@ def index():
 def translate():
     # Load image or placeholder
 
-    image = get_image(request)
 
     # Set the default for language translation
-    target_language = "en"
-    if request.form and "target_language" in request.form:
-        target_language = request.form["target_language"]
-
+    target_language = 'en'
 
     # If it"s a GET, just return the form
-    if request.method == "GET":
-        return render_template("translate_upload.html", image_uri=image.uri,  target_language=target_language)
 
-    print("LANGUAGE:", target_language)
 
-    # Create a placeholder for messages
+    # Create a placeholder for translation results
     messages = []
 
 
-    # TODO: Add code to retrieve text from picture
+    # Add code to retrieve/process text from picture
     messages = extract_text_from_image(image.blob, vision_client)
 
-    print("IMAGE BLOB: ", image.blob)
 
-    # TODO: Add code to translate text
+    # Add code to translate text
     messages = translate_text(messages, target_language, COGSVCS_KEY, COGSVCS_REGION)
 
     return render_template("translate_upload.html", image_uri=image.uri, target_language=target_language, messages=messages)
@@ -213,17 +203,8 @@ def translate():
 # Extract text from image
 def extract_text_from_image(image, client):
     try:
-        result = client.recognize_printed_text_in_stream(image=image)
-
-        lines=[]
-        if not result.regions:
-            lines.append("Photo contains no text to translate")
-        else:
-            for line in result.regions[0].lines:
-                text = " ".join([word.text for word in line.words])
-                lines.append(text)
-                print("TEST LINES: ", lines)
-        return lines
+        # make the API call and then return the results
+        pass
     except ComputerVisionErrorException as e:
         print(e)
         return ["Computer Vision API error: " + e.message]
@@ -246,23 +227,15 @@ def translate_text(lines, target_language, key, region):
 
     input=[]
 
+    # for each line of text in the image
     for line in lines:
         input.append({ "text": line })
 
     try:
-        response = requests.post(uri, headers=headers, json=input)
-        response.raise_for_status() # Raise exception if call failed
-        results = response.json()
+        # calling the translation API
+        pass
 
-        translated_lines = []
-
-        for result in results:
-            for translated_line in result["translations"]:
-                translated_lines.append(translated_line["text"])
-        print("TRANSLATED LINES: ", translated_lines)
-
-        return translated_lines
-
+        # return the results
     except requests.exceptions.HTTPError as e:
         return ["Error calling the Translator Text API: " + e.strerror]
 
@@ -286,35 +259,19 @@ def translate_image_url():
     ### IMPORTANT ###
     # Add if URL text box is empty do not call the API
 
-    if request.form and ("target_language" in request.form or "web_url" in request.form):
-        target_language = request.form["target_language"]
-        web_url = request.form["web_url"]
-        print(49,'now call api with this img url', web_url)
+
 
         # If it"s a GET, just return the form
     if request.method == "GET":
         return render_template("translate_url.html", image_uri=image.uri, target_language=target_language, web_url=web_url)
 
     if(web_url is not ''):
-            print("NOT EMPTY", web_url)
             json = { 'url': web_url }
             data = None
 
-            # TODO: Add code to retrieve text from picture
-            #messages = extract_text_from_image(image.blob, vision_client)
-            result = text_recognition(text_recognition_dict['text_recognition_API'][0]['url'],
-                                            text_recognition_dict['text_recognition_API'][0]['headers'],
-                                            json,
-                                            data)
+            # Add code to retrieve text from picture
 
-            result_list = []
-            for i in result['analyzeResult']['readResults'][0]['lines']:
-                result_list.append(i['text'])
-
-            print("EXTRACT TEXT FROM IMAGE: ", result)
-            print("MESSAGES: ", result_list)
-
-            #params = '&to=es'
+            #params set translation params
             params = '&to='+target_language
 
             # Convert result to json
