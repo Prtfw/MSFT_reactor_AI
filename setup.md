@@ -138,4 +138,4 @@ To install git, navigate to [Git downloads](https://git-scm.com/downloads) and f
 
 ## Obtaining the starter site
 
-Congratulations! All prerequisites are now installed. Let's take a look at [obtaining the starter site](./starting-site.md).
+Congratulations! All prerequisites are now installed. Let's take a look at [obtaining the starter site in Python](./starting-site_python.md) **or** [obtaining the starter site in JS](./starting-site_js.md).
