@@ -1,6 +1,6 @@
 # Starter site
 
-We'll be adding functionality to an existing website, which represents our client, Contoso Travel. Contoso Travel is working to enable travelers to translate street signs and identify who is in a picture. You'll add functionality to three separate sections of the website - **translate** for sign translation, **train** for training the application to detect faces, and finally **detect** to identify faces.
+We'll be adding functionality to an existing website, which represents our client, Contoso Travel. Contoso Travel is working to enable travelers to translate street signs and identify who is in a picture. You'll add functionality to three separate sections of the website - **translate** for sign translation, **train** for training the application to cruise ships, and finally **detect** to identify cruise ships.
 
 ## Obtaining the starter site
 
@@ -22,33 +22,19 @@ git clone https://github.com/microsoft/reactors
 
 ``` console
 # Windows
-cd reactors\AI_1\starter-site
+cd reactors\AI_1\starter-site_js
 
 # Linux or macOS
-cd ./reactors/AI_1/starter-site
+cd ./reactors/AI_1/starter-site_js
 ```
 
-2. Let's create a virtual environment for the packages we'll be using. Virtual environments allow us to separate packages from other environments. Return to the command line and issuing the following command:
+2. Now, we'll install the packages listed in requirements.txt by using npm (or yarn)
 
 ``` console
-# Windows
-python -m venv env
-.\env\Scripts\activate
+npm install
 
 # macOS or Linux
-python3 -m venv env
-. ./env/bin/activate
-```
-
-Note: If you're using macOS or Linux the leading `.` for the `. ./env/bin/activate` is required as it indicates to Python where your source code resides.
-
-3. Finally, we'll install the packages listed in requirements.txt by using pip
-
-``` console
-pip install -r requirements.txt
-
-# macOS or Linux
-pip3 install -r requirements.txt
+npm install
 ```
 
 ## Explore the current files
@@ -57,18 +43,16 @@ Take a moment to browse the files that were copied into the project directory. O
 
 Verify the following files exist:
 
-- **app.py**, which holds the Python code that drives the site
+- **index.js**, which holds the node and express code that drives the site
 - **image.py**, which holds a helper class we'll use for image management
-- **templates/index.html**, the template for the home page
-- **templates/base.html**, the template the remainder inherits from
-- **templates/translate.html**, the template for translating signs
-- **templates/train.html**, the template for training faces
-- **templates/detect.html**, the template for detecting faces
+- **templates/??.html**, the template for the different page
+- **views/??.ejs**, the ejs templating for different pages
+- **views/partials/??.ejs**, the folder for some reusable / small ejs components, to be used by the main ejs pages
 - **static/main.css**, which contains CSS to dress up the home page
 - **static/banner.jpg**, which contains the website banner
 - **static/placeholder.jpg**, which contains a placeholder image for photos that have yet to be uploaded
 
-> **NOTE:** We won't be focusing on working with HTML during this course. We want to be able to focus on the code necessary for Cognitive Services.
+> **NOTE:** We won't be focusing on working with HTML or EJS during this course. We want to be able to focus on the code necessary for Cognitive Services.
 
 ## Start the site
 
@@ -76,12 +60,14 @@ Let's start the site using Flask. We will configure Flask to run in development 
 
 ``` bash
 # Windows
-set FLASK_ENV=development
-flask run
+npm start
+or
+yarn dev
 
 # macOS or Linux
-export FLASK_ENV=development
-flask run
+npm start
+or
+yarn dev
 ```
 
 > **NOTE:** **Keep this terminal or command window open**, as we're going to be making changes to our site throughout the day. If you accidentally close it, you can restart your site by issuing the same commands from above.
@@ -92,4 +78,4 @@ Open a browser and navigate to `http://localhost:5000`. Confirm the website appe
 
 ## Next steps
 
-Congratulations! You've configured your environment and are ready to complete the rest of the labs! You can start by examining [Computer Vision and Translation services](computer-vision-translator/README.md). You can also explore [Python basics](intro-python.md) or [Flask basics](intro-flask.md) if you're not familiar with the language or framework.
+Congratulations! You've configured your environment and are ready to complete the rest of the labs! The code structure and the hints we left for you to complete the labs. If you get stuck please feel free to review the reference implementation in solution-site_js or ask the MSFT team for help.
