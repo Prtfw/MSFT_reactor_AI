@@ -4,7 +4,7 @@ We're glad you're here!
 
 ## What to expect
 
-This will be a one-day, expert led session where you'll explore Artificial Intelligence (AI) and [Cognitive Services](https://azure.microsoft.com/services/cognitive-services/), how to integrate AI into your applications, when to create your own Machine Learning (ML) models, all by walking through a set of examples built on [Python](https://python.org).
+This will be a one-day, expert led session where you'll explore Artificial Intelligence (AI) and [Cognitive Services](https://azure.microsoft.com/services/cognitive-services/), how to integrate AI into your applications, when to create your own Machine Learning (ML) models, all by walking through a set of examples built on [Python](https://python.org) and [Javascript](https://nodejs.org/en/docs/es6/)
 
 ## Prerequisites
 
