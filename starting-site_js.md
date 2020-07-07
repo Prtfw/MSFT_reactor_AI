@@ -78,4 +78,4 @@ Open a browser and navigate to `http://localhost:5000`. Confirm the website appe
 
 ## Next steps
 
-Congratulations! You've configured your environment and are ready to complete the rest of the labs! The code structure and the hints we left for you to complete the labs. If you get stuck please feel free to review the reference implementation in solution-site_js or ask the MSFT team for help.
+Congratulations! You've configured your environment and are ready to complete the rest of the labs! The code structure and the hints we left for you to complete the labs. If you get stuck please feel free to review the reference implementation in ```solution-site_js``` folder or ask the MSFT team for help.
