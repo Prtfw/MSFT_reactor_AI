@@ -3,19 +3,23 @@ from flask import Flask, render_template, request
 
 # Load system variables with dotenv
 from dotenv import load_dotenv
-load_dotenv('../.env')
+from dotenv import load_dotenv
+load_dotenv()
 
 import image_helper
 import json as j
 import uuid
 import time
-# import cv2
+
 import operator
 import numpy as np
 import datetime
+from datetime import datetime
 
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
+from matplotlib.patches import Rectangle 
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -28,8 +32,6 @@ from io import BytesIO
 import pprint
 from pprint import pprint
 
-
-app = Flask(__name__)
 #---------------------------------------------------------------------------------------------------------------------#
 # Load keys and urls
 
@@ -136,7 +138,7 @@ def get_image(request):
 
 
 
-# Working image code!
+# Display image from URL with resul text
 def render_image(result_title, image_url):
 
   """Display the obtained results onto the input image"""
@@ -147,16 +149,160 @@ def render_image(result_title, image_url):
 
   ax.imshow( image )
 
-  plt.title(result_title, fontsize=30, va="center", color='r', weight='heavy')
+  plt.title(result_title, fontsize=8, va="center", color='r', weight='heavy')
 
   plt.axis('off')
 
-
-
   plt.savefig('static/' + result_title)
 
+  image.close()
 
 
+# Display image from uploaded image with result text
+def render_upload_image(result_title, image_blob):
+
+    image = Image.open(image_blob)
+
+    fig, ax = plt.subplots(figsize=(4, 4), dpi=300)
+
+    ax.imshow( image )
+
+    plt.title(result_title, fontsize=8, va="center", color='r', weight='heavy')
+
+    plt.axis('off')
+
+    plt.savefig('static/' + result_title)
+
+    image.close()
+
+
+# Does not work properly
+def render_translation_url(result_title, image_url, target_language):
+    
+    image = Image.open(BytesIO(requests.get(image_url).content))
+
+    fig, ax = plt.subplots(figsize=(4, 4), dpi=300)
+
+    ax.imshow( image )
+
+    plt.title(result_title, fontsize=30, va="center", color='r', weight='heavy')
+
+    plt.axis('off')
+
+    plt.savefig('static/' + target_language)
+
+    image.close()
+
+
+# Function to render extracted text
+def render_extracted_text(result, image):
+
+    polygons = []
+    
+    if ("analyzeResult" in result):
+        # Extract the recognized text, with bounding boxes.
+        polygons = [(line["boundingBox"], line["text"])
+        for line in result["analyzeResult"]["readResults"][0]["lines"]]
+
+    
+    image = Image.open(BytesIO(requests.get(image).content))
+
+    fig, ax = plt.subplots(figsize=(15, 20))
+    ax.imshow( image )
+    
+
+    for polygon in polygons:
+        vertices = [(polygon[0][i], polygon[0][i+1])
+                    for i in range(0, len(polygon[0]), 2)]
+
+        text = polygon[1]
+        patch = Polygon(vertices, closed=True, fill=False, linewidth=2, color='y')
+        ax.axes.add_patch(patch)
+        plt.text(vertices[0][0], vertices[0][1], text, fontsize=24, va="center", color='r', weight='heavy', 
+                family='monospace', rotation=25)
+
+    plt.axis('off')
+
+    plt.savefig('static/' + 'translation')
+
+
+def render_object_image(result_title, image_url, image_title):
+    
+  """Display the obtained results onto the input image"""
+
+  image = Image.open(BytesIO(requests.get(image_url).content))
+
+  fig, ax = plt.subplots(figsize=(4, 4), dpi=300)
+
+  ax.imshow( image )
+
+  plt.title(result_title, fontsize=8, va="center", color='r', weight='heavy')
+
+  plt.axis('off')
+
+  plt.savefig('static/' + image_title)
+
+
+def render_object_detection(detection_result, image_url, image_title):
+
+    image = Image.open(BytesIO(requests.get(image_url).content))
+    fig, ax = plt.subplots(figsize=(4,4), dpi=300)
+
+    ax.imshow(image, alpha=0.6)
+
+    for i in detection_result['objects']:
+        fr = i["rectangle"]
+        fa = i["object"]
+        origin = (fr["x"], fr["y"])
+
+        rectangle = matplotlib.patches.Rectangle(origin, fr["w"],
+                                fr["h"], fill=False, linewidth=2, color='b')
+        
+        ax.axes.add_patch(rectangle)
+        ax.text(origin[0], origin[1], "%s"%(fa),
+                    fontsize=10, weight="bold", va="bottom")
+
+        ax.axis("off")
+
+        plt.savefig('static/' + image_title)
+
+
+def render_object_detection_upload(detection_result, image_blob):
+    
+    image = Image.open(image_blob)
+    fig, ax = plt.subplots(figsize=(4,4), dpi=300)
+    dt_string = ''
+
+    ax.imshow(image, alpha=0.6)
+
+    # Plot detected results on image
+    for i in detection_result['objects']:
+        fr = i["rectangle"]
+        fa = i["object"]
+        origin = (fr["x"], fr["y"])
+
+        rectangle = matplotlib.patches.Rectangle(origin, fr["w"],
+                                fr["h"], fill=False, linewidth=2, color='b')
+        
+        ax.axes.add_patch(rectangle)
+        ax.text(origin[0], origin[1], "%s"%(fa),
+                    fontsize=10, weight="bold", va="bottom")
+
+        ax.axis("off")
+
+       
+
+        # Current date now
+        now = datetime.now()
+        
+        # Save file as date and time now to keep it unique
+        image_filename = now.strftime("%d_%m_%Y%H_%M_%S")
+
+        # Save the image to the static folder
+        plt.savefig('static/' + image_filename)
+
+    # Return the filename    
+    return image_filename
 
 #---------------------------------------------------------------------------------------------------------------------#
 # Init application
@@ -271,7 +417,6 @@ def translate_text(lines, target_language, key, region):
 
 
 #---------------------------------------------------------------------------------------------------------------------#
-# MY CODE
 
 @app.route("/translate_url", methods=["GET", "POST"])
 def translate_image_url():
@@ -279,7 +424,7 @@ def translate_image_url():
     image = get_image(request)
 
    # Set the default for language translation
-    target_language = "en"
+    target_language = 'en'
     web_url = ''
 
 
@@ -326,12 +471,20 @@ def translate_image_url():
 
             result_list = translate_text2(translator_dict['translator_text_API'][0]['_key'], params, data, body)
 
+
             # Create a placeholder for messages
             messages = []
             for i in result_list[0]['translations']:
                 messages.append(i['text'])
+            
 
-            print("TRANSLATED TEXT: ", messages)
+            print("Messages: ", messages[0])
+
+            print("TRANSLATED TEXT: ", messages) 
+
+            #render_translation_url(messages, web_url, target_language)
+            #saved_translation_image = "/static/" + target_language + ".png"
+            
 
             return render_template("translate_url.html", image_uri=web_url, target_language=target_language, messages=messages)
 
@@ -365,7 +518,7 @@ def text_recognition(_url, headers, json, data):
 
 
     # Helper function to translate text
-def translate_text2(translate_urltranslate_key, params, data, json):
+def translate_text2(translate_key, params, data, json):
 
   constructed_url = translator_dict['translator_text_API'][0]['url'] + params
 
@@ -387,33 +540,6 @@ def translation_to_json(result):
   convert_to_json = j.dumps(text_to_translate)
 
   return convert_to_json
-
-
-def render_text_recognition_image(result, image):
-
-  polygons = []
-
-  if ("analyzeResult" in result):
-
-    # Extract the recognized text, with bounding boxes.
-    polygons = [(line["boundingBox"], line["text"])
-    for line in result["analyzeResult"]["readResults"][0]["lines"]]
-
-  #image = Image.open(BytesIO(requests.get(image_url).content))
-
-  fig, ax = plt.subplots(figsize=(15, 20))
-  ax.imshow( image )
-
-
-  for polygon in polygons:
-      vertices = [(polygon[0][i], polygon[0][i+1])
-                  for i in range(0, len(polygon[0]), 2)]
-
-      text = polygon[1]
-      patch = Polygon(vertices, closed=True, fill=False, linewidth=2, color='y')
-      ax.axes.add_patch(patch)
-      plt.text(vertices[0][0], vertices[0][1], text, fontsize=24, va="center", color='r', weight='heavy',
-               family='monospace', rotation=25)
 
 
 #---------------------------------------------------------------------------------------------------------------------#
@@ -465,7 +591,9 @@ def processRequest(_url, json, data, headers, params ):
 
     return result
 
-# GET and POST to landmark (Computer Vision API)
+#-------------------------------------------------------------------------------------------------------------------------------------------#
+
+# GET and POST to landmark image URL (Computer Vision API)
 @app.route("/landmark_url", methods=["GET", "POST"])
 def landmark_image_url():
 
@@ -503,12 +631,429 @@ def landmark_image_url():
                         analyze_dict['computer_vision_API'][0]['headers'],
                         analyze_dict['computer_vision_API'][0]['params'] )
 
+            print("Analyze result: ", analyze_result)
+            
+            
 
+#-------------------------------------------------------------------------------------------------------------------------------------------#
+# Landmark request
+
+            # If landmark detected
+            try:
+
+                if ( analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] ):     
+                    
+                    #analyze_result_text = analyze_result['categories'][0]["detail"]['landmarks'][0]['name']
+                    print("Analyse result text below: ", analyze_result['categories'][0]["detail"]['landmarks'][0]['name'])
+                    messages = [analyze_result['categories'][0]["detail"]['landmarks'][0]['name']]
+                    # Render image with result text
+                    render_url_test = render_image(analyze_result['categories'][0]["detail"]['landmarks'][0]['name'], landmark_url)
+                    saved_landmark_image = "/static/" + analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] + ".png"
+                    return render_template("landmark_url.html", image_uri= saved_landmark_image, messages=messages)
+
+            except:
+
+                try:
+                        
+                    if(analyze_result['categories'][0]):
+
+                        tags = []
+
+                        for i in analyze_result['description']['tags']:
+
+                            tags.append(i.upper() + '\n')
+                            
+
+                    messages = ["No landmark detected. Objects detected:  ", tags]
+                    return render_template("landmark_url.html", image_uri= landmark_url, messages=messages)
+
+                except:
+
+                    try:
+                        if( analyze_result['description']['tags'][0] ):
+                            messages = ["No landmark detected.", ['description']['tags'][0]]
+                            print( analyze_result['categories'] )
+                            return render_template("landmark_url.html", image_uri= landmark_url, messages=messages)
+                
+
+                    except:
+                        try:
+                            if(analyze_result['categories'] == []):
+                                print("No landmark detected.", analyze_result['description']['captions'][0]['text'])
+                                messages = ["No landmark detected. Detected objects: ", analyze_result['description']['captions'][0]['text'] ]
+                                return render_template("landmark_url.html", image_uri= landmark_url, messages=messages)
+                        except:
+                            print("Error")
+                            messages = ['ERROR']
+                            return render_template("landmark_url.html", image_uri=landmark_url, messages=messages)
+
+                
+                        
     else:
         messages = ['Please enter an image URL']
         return render_template("landmark_url.html", image_uri=landmark_url, messages=messages)
 
 
+#-------------------------------------------------------------------------------------------------------------------------------------------#
+
+# GET and POST to landmark image upload (Computer Vision API)
+@app.route("/landmark_upload", methods=["GET", "POST"])
+def landmark_image_upload():
+
+    landmark_upload_image = get_image(request)
+
+     # Create a placeholder for messages
+    messages = []
+
+    ### IMPORTANT ###
+
+        # If it"s a GET, just return the form
+    if request.method == "GET":
+        return render_template("landmark_upload.html", image_uri=landmark_upload_image.uri)
+
+    json = None
+    data = landmark_upload_image.blob
+
+    # Landmark image upload headers
+    landmark_upload_headers = {
+    'Content-Type': 'application/octet-stream',
+    'Ocp-Apim-Subscription-Key': _key
+    }
+        
+   
+   # Post image to API and get result
+    analyze_result = processRequest(analyze_dict['computer_vision_API'][0]['url'],
+                json,
+                data,
+                landmark_upload_headers, 
+                analyze_dict['computer_vision_API'][0]['params'] )
+
+  
+
+    # If landmark detected
+    try:
+
+
+        if ( analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] ):    
+
+            print("Analyse result text landmark: ", analyze_result['categories'][0]["detail"]['landmarks'][0]['name'])
+            messages = [analyze_result['categories'][0]["detail"]['landmarks'][0]['name']]
+
+            print("Landmark messages: ", messages)
+            # Render image with result text
+            
+            render_url_test = render_upload_image(analyze_result['categories'][0]["detail"]['landmarks'][0]['name'], landmark_upload_image.blob)
+            
+            saved_landmark_image = "/static/" + analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] + ".png"
+            print("Under saved landmark image")
+            return render_template("landmark_upload.html", image_uri= saved_landmark_image, messages=messages)
+
+    except:
+        print("IN first except")
+
+        try:
+     
+            if(analyze_result['categories'][0]):
+
+                tags = []
+
+                for i in analyze_result['description']['tags']:
+                    tags.append(i.upper() + '\n')
+                            
+
+                messages = ["No landmark detected. Objects detected:  ", tags]
+                return render_template("landmark_upload.html", image_uri= landmark_upload_image.uri, messages=messages)
+
+        except:
+
+
+            try:
+
+                if( analyze_result['description']['tags'][0] ):
+                    messages = ["No landmark detected.", ['description']['tags'][0]]
+                    print( analyze_result['categories'] )
+                    return render_template("landmark_upload.html", image_uri= landmark_upload_image.uri, messages=messages)
+                
+
+            except:
+
+                try:
+
+                    if(analyze_result['categories'] == []):
+
+                        print("No landmark detected.", analyze_result['description']['captions'][0]['text'])
+                        messages = ["No landmark detected. Detected objects: ", analyze_result['description']['captions'][0]['text'] ]
+                        return render_template("landmark_upload.html", image_uri= landmark_upload_image.uri, messages=messages)
+                except:
+
+                    print("Error")
+                    messages = ['ERROR']
+                    return render_template("landmark_upload.html", image_uri=landmark_upload_image.uri, messages=messages)
+
+#-------------------------------------------------------------------------------------------------------------------------------------------# 
+# Object Detection API
+
+# GET and POST to landmark image URL (Computer Vision API)
+@app.route("/object_detect_url", methods=["GET", "POST"])
+def object_detect_url():
+
+    '''WIP CODE'''
+
+    image = get_image(request)
+
+   # Image URL to detect objects
+    web_url = ''
+
+     # Create a placeholder for messages
+    messages = []
+
+
+    ### IMPORTANT ###
+    # Add if URL text box is empty do not call the API
+    if request.form and ("web_url" in request.form):
+        web_url = request.form["web_url"]
+        print(49,'now call api with this img url', web_url)
+
+        # If it"s a GET, just return the form
+    if request.method == "GET":
+        return render_template("object_detect_url.html", image_uri=image.uri, web_url=web_url)
+
+    # If image url is not empty
+    if(web_url is not ''):
+            #print("NOT EMPTY", web_url)
+            detect_json = { 'url': web_url }
+            data = None
+
+           
+            # Object detection result
+            detection_result = processRequest(detect_dict['object_detection_API'][0]['url'], 
+                        detect_json, 
+                        data, 
+                        detect_dict['object_detection_API'][0]['headers'], 
+                        detect_dict['object_detection_API'][0]['params'] )
+            
+            print("Detection result: ", detection_result)
+
+
+            detection_text_list = []
+            for i in detection_result['objects']:
+                detection_text_list.append(i['object'])
+                listToStr = ' '.join([str(elem) for elem in detection_text_list]) 
+
+            print("Detection list: ", detection_text_list)
+
+            if(detection_text_list == []):
+                print("Empty")
+                messages = ["No objects detected. "]
+                return render_template("object_detect_url.html", image_uri= web_url, messages=messages)
+
+            else:
+                print("Not empty.")
+                        
+            
+
+# Object detection request url
+
+                try:
+                    messages = ["Objects detected: ", detection_text_list ]
+                    #render_object_image(detection_text_list, web_url, detection_text_list[0])
+                    render_object_detection(detection_result, web_url, detection_text_list[0])
+                    saved_image = "/static/" + detection_text_list[0] + ".png"
+                    return render_template("object_detect_url.html", image_uri= saved_image, messages=messages)
+                    #os.remove(path='/static/object.png')
+                            
+
+                except:
+                    messages = ['Something went wrong.']
+                    return render_template("object_detect_url.html", image_uri=web_url, messages=messages)
+
+    else:
+        messages = ['Please enter an image URL']
+        return render_template("object_detect_url.html", image_uri=web_url, messages=messages)
+
+       
+
+#-------------------------------------------------------------------------------------------------------------------------------------------#
+# GET and POST to object detection image upload (Object detection API)
+
+@app.route("/object_detect_upload", methods=["GET", "POST"])
+def object_detect_upload():
+
+    detect_upload_image = get_image(request)
+
+     # Create a placeholder for messages
+    messages = []
+
+    ### IMPORTANT ###
+
+        # If it"s a GET, just return the form
+    if request.method == "GET":
+        return render_template("object_detect_upload.html", image_uri=detect_upload_image.uri)
+
+    detect_json = None
+    data = detect_upload_image.blob
+
+    # Landmark image upload headers
+    object_detect_upload_headers = {
+    'Content-Type': 'application/octet-stream',
+    'Ocp-Apim-Subscription-Key': _key
+    }
+        
+   
+    try:
+        # Object detection result
+        detection_result = processRequest(detect_dict['object_detection_API'][0]['url'], 
+                            detect_json, 
+                            data, 
+                            object_detect_upload_headers, 
+                            detect_dict['object_detection_API'][0]['params'] )
+                
+        print("Detection result: ", detection_result)
+
+
+        detection_text_list = []
+        for i in detection_result['objects']:
+            detection_text_list.append(i['object'])
+        listToStr = ' '.join([str(elem) for elem in detection_text_list]) 
+
+
+        if(detection_text_list == [] or detection_result == None):
+            print("Empty")
+            messages = ["No objects detected. "]
+            return render_template("object_detect_upload.html", image_uri= detect_upload_image.uri, messages=messages)
+
+        else:
+            print("Detection list: ", detection_text_list[0])
+            print("Not empty.")
+                            
+                
+    # Object detection request upload
+
+            try:
+                messages = ["Objects detected: ", detection_text_list ]
+                
+                image_filename = render_object_detection_upload(detection_result, detect_upload_image.blob)
+               
+                # Get saved image from static folder
+                image_with_result = "/static/" + image_filename + ".png"
+                return render_template("object_detect_upload.html", image_uri= image_with_result, messages=messages)
+                
+                                
+
+            except:
+                messages = ['Something went wrong.']
+                return render_template("object_detect_upload.html", image_uri=detect_upload_image.uri, messages=messages)
+
+    except Exception as e:
+        print("Exception", str(e))
+        messages = ['Error. Could not use this image for object detection. ']
+        return render_template("object_detect_upload.html", image_uri=detect_upload_image.uri, messages=messages)
+
+#-------------------------------------------------------------------------------------------------------------------------------------------#
+# Sentiment analysis
+
+
+# # Cognitive API for Text Analytics
+def sentiment_analysis(text, language):
+
+  documents = {"documents": [
+    {"id": "1", "language": language,
+        "text": text}
+              ]}
+  
+  response = requests.post(sentiment_dict['sentiment_analytics_API'][0]['url'], 
+                           headers=sentiment_dict['sentiment_analytics_API'][0]['headers'], 
+                           json=documents)
+  
+  sentiment_result = response.json()
+
+  return sentiment_result
+
+
+@app.route("/sentiment", methods=["GET", "POST"])
+def sentiment():
+
+   # Set the default for language translation
+    sentiment_text = ''
+    messages = []
+
+    ### IMPORTANT ###
+    # Add if URL text box is empty do not call the API
+
+    if request.form and ("sentiment_text" in request.form):
+        sentiment_text = request.form["sentiment_text"]
+        print(49,'now call api with this sentiment text', sentiment_text)
+
+
+        # If it"s a GET, just return the form
+    if request.method == "GET":
+        return render_template("sentiment.html",sentiment_text=sentiment_text)
+
+    if(sentiment_text is not ''):
+
+        messages = []
+
+        # Convert text to json
+        convert_to_json = j.dumps(sentiment_text)
+
+        print("Sentiment text type", type(sentiment_text))
+        
+        print("NOT EMPTY", sentiment_text)
+        body = [{'text': convert_to_json}]
+        data = None
+
+        print("BODY type", type(body))
+
+        params = '&to='+ 'en'
+
+        print("Params", params)
+    
+        translation_result = translate_text2(translator_dict['translator_text_API'][0]['_key'], params, data, body)
+
+        print("Translated result", translation_result)
+
+        translation = ''
+        for i in translation_result[0]['translations']:
+            translation = i['text']
+            translation = str(translation).strip('[]')
+        print("Translation", translation)
+
+        #messages = [translation]
+
+        sentiment_result = sentiment_analysis(convert_to_json, 'en')
+
+        print("Score: ", sentiment_result['documents'][0]['score'])
+
+        # Formatting the score to % 
+        sentiment_score = round( round(sentiment_result['documents'][0]['score'], 2) * 100 )
+
+
+        for i in sentiment_result['documents']:
+            score = i['score']
+            if(score >= 0.50):
+                messages = [f"This is probably a positive sentence with a {sentiment_score} % sentiment score"]
+            else:
+                messages = [f"This is probably a negative sentence with a {sentiment_score} % sentiment score."]
+
+            
+        return render_template("sentiment.html",  messages=messages)
+
+    else:
+        messages = ["You need to enter a sentence. "]
+
+        return render_template("sentiment.html", messages=messages)
+
+
+    
 
 
 
+  
+
+    
+
+            
+      
+        
+
+                        

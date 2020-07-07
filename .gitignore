@@ -1,10 +1,6 @@
 # vs code settings
 .vscode
 
-# sub folder git files
-AI_1/.gitignore
-AI_1/.git
-
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -111,3 +107,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 .DS_Store
+solution-site_js/node_modules
+starter-site_js/node_modules
+solution-site_python/.msft_ai_flask/
+starter-site_js/__index.js
+

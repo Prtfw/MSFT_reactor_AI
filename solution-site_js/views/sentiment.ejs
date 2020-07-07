@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <%- include('partials/header.ejs') %>
+</head>
+
+<body>
+    <div id="banner">
+        <%- include('partials/banner.ejs') %>
+        <div class="container text-center">
+            <h1>Contoso Travel</h1>
+            <h3>Write a sentence and see if it is detected as postive or negative!</h3>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12 text-center">
+                
+                <form method="POST" action="/sentiment" name ="frm">
+
+                <input type="text" class="form-control" id="sentiment_text" name="sentiment_text" placeholder="Write your text here">
+                <input type="submit" id="submit-url-button" class="btn" value="Load text"  >
+
+                  
+                    <div style="display: none">
+                        <input type="text" id="upload-url" name="sentiment_text" accept=".jpg,.jpeg,.png,.gif" placeholder="Load text">
+                    </div>
+
+                    <div style="display: none">
+                        <input type="submit" id="submit-url-button" value="Upload">
+                    </div>
+                                
+                    <div style="display: none">
+                        <img id="uploaded-image-url" >
+                        <input type="button" id="upload-url-button" class="btn" value="Load URL image">
+                    </div>
+                
+                </form>
+            </div>
+        </div>
+    </div>
+    
+ 
+    <div class="container">
+        <%- include('partials/modal.ejs') %>
+    </div>
+
+ 
+    <script type="text/javascript">
+
+    // Show modal/pop up with translated text
+    var result = "<%= result %>"
+    if(result == ''){
+        $("#myModal").modal("hide");
+    }
+   else{
+    body = $(".modal-body");
+    body.empty();
+
+    body.append("<h4>" + result + "</h4>");
+        
+    $("#myModal").modal("show");
+
+   }
+
+    </script>
+
+<script type="text/javascript">
+    $(function () {
+        $("#upload-url-button").click(function () {
+            $("#upload-url").click();
+        });
+        $("#upload-url").change(function () {
+            $("#submit-url-button").click();
+        });
+    });
+</script>
+ 
+</body>
+
+</html>

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+​
+{% block header %}
+<div class="container text-center">
+    <h1>Contoso Travel</h1>
+    <h3>Paste in an image URL and find the objects in it!</h3>
+</div>
+{% endblock %}
+​
+{% block optional_form %}
+<input type="text" class="form-control" id="web_url" name="web_url" placeholder="Add image url here">
+<input type="submit" id="submit-url-button" value="Upload image URL">
+
+
+<img id="uploaded-image" src="{{ image_uri }}" >
+    
+<div style="display: none">
+    <input type="button" id="upload-url-button" class="btn" value="Load URL image">
+</div>
+
+{% endblock %}
+​
+{% block optional_scripts %}
+{# Reset to selected language #}
+
+
+{% endblock %}
