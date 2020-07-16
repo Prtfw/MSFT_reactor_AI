@@ -20,7 +20,7 @@ We will be using [Azure](https://azure.microsoft.com/) for the artificial intell
 
 ## Codespaces
 
-We will be using [Visual Studio Codespaces](https://visualstudio.microsoft.com/services/visual-studio-codespaces/). Please follow the instructions here: https://docs.microsoft.com/en-us/visualstudio/codespaces/how-to/browser. **You will need a Azure account and subscription first.**
+We will be using [Visual Studio Codespaces](https://visualstudio.microsoft.com/services/visual-studio-codespaces/). Please follow the instructions here: https://docs.microsoft.com/en-us/visualstudio/codespaces/how-to/browser. **You will need a Azure account and subscription first. Clone this repo to create Codespace we will be using for this class.**
 
 ### Active student
 
