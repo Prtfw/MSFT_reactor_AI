@@ -18,6 +18,10 @@ We will be using [Azure](https://azure.microsoft.com/) for the artificial intell
 
 > **NOTE:** During the exercises you will create a key for use with Azure Cognitive Services, specifically an All-in-One key. This key is only available at the standard tier, meaning there will be some cost incurred. You can consult the [pricing documentation](https://azure.microsoft.com/pricing/details/cognitive-services/) for full information on pricing. At the time of this write-up, the cost is typically $1 US for 1,000 transactions, and we will be executing about 40 transactions. Your instructor will also provide a key for use during the event should you so desire.
 
+## Codespaces
+
+We will be using [Visual Studio Codespaces](https://visualstudio.microsoft.com/services/visual-studio-codespaces/). Please follow the instructions here: https://docs.microsoft.com/en-us/visualstudio/codespaces/how-to/browser. **You will need a Azure account and subscription first.**
+
 ### Active student
 
 If you're an [active student](https://azure.microsoft.com/free/free-account-students-faq/), you can enroll for [Azure for Students](https://aka.ms/a4s) for **free**. Azure for Students offers $100 in credit over 12 months, and many free services for testing and learning. You can visit [Azure for Students](https://aka.ms/a4s) to enroll!
