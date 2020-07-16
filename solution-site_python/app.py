@@ -3,8 +3,7 @@ from flask import Flask, render_template, request
 
 # Load system variables with dotenv
 from dotenv import load_dotenv
-from dotenv import load_dotenv
-load_dotenv()
+load_dotenv('./../.env')
 
 import image_helper
 import json as j
@@ -19,7 +18,7 @@ from datetime import datetime
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
-from matplotlib.patches import Rectangle 
+from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -47,7 +46,7 @@ _sentiment_key = os.environ["_sentiment_key"]
 
 _base_url = os.environ["base_url"]
 
-_sentiment_url = os.environ["sentiment_url"]
+_sentiment_url = os.environ["_sentiment_url"]
 
 
 COGSVCS_CLIENTURL = _base_url
@@ -178,7 +177,7 @@ def render_upload_image(result_title, image_blob):
 
 # Does not work properly
 def render_translation_url(result_title, image_url, target_language):
-    
+
     image = Image.open(BytesIO(requests.get(image_url).content))
 
     fig, ax = plt.subplots(figsize=(4, 4), dpi=300)
@@ -198,18 +197,18 @@ def render_translation_url(result_title, image_url, target_language):
 def render_extracted_text(result, image):
 
     polygons = []
-    
+
     if ("analyzeResult" in result):
         # Extract the recognized text, with bounding boxes.
         polygons = [(line["boundingBox"], line["text"])
         for line in result["analyzeResult"]["readResults"][0]["lines"]]
 
-    
+
     image = Image.open(BytesIO(requests.get(image).content))
 
     fig, ax = plt.subplots(figsize=(15, 20))
     ax.imshow( image )
-    
+
 
     for polygon in polygons:
         vertices = [(polygon[0][i], polygon[0][i+1])
@@ -218,7 +217,7 @@ def render_extracted_text(result, image):
         text = polygon[1]
         patch = Polygon(vertices, closed=True, fill=False, linewidth=2, color='y')
         ax.axes.add_patch(patch)
-        plt.text(vertices[0][0], vertices[0][1], text, fontsize=24, va="center", color='r', weight='heavy', 
+        plt.text(vertices[0][0], vertices[0][1], text, fontsize=24, va="center", color='r', weight='heavy',
                 family='monospace', rotation=25)
 
     plt.axis('off')
@@ -227,7 +226,7 @@ def render_extracted_text(result, image):
 
 
 def render_object_image(result_title, image_url, image_title):
-    
+
   """Display the obtained results onto the input image"""
 
   image = Image.open(BytesIO(requests.get(image_url).content))
@@ -257,7 +256,7 @@ def render_object_detection(detection_result, image_url, image_title):
 
         rectangle = matplotlib.patches.Rectangle(origin, fr["w"],
                                 fr["h"], fill=False, linewidth=2, color='b')
-        
+
         ax.axes.add_patch(rectangle)
         ax.text(origin[0], origin[1], "%s"%(fa),
                     fontsize=10, weight="bold", va="bottom")
@@ -268,7 +267,7 @@ def render_object_detection(detection_result, image_url, image_title):
 
 
 def render_object_detection_upload(detection_result, image_blob):
-    
+
     image = Image.open(image_blob)
     fig, ax = plt.subplots(figsize=(4,4), dpi=300)
     dt_string = ''
@@ -283,25 +282,25 @@ def render_object_detection_upload(detection_result, image_blob):
 
         rectangle = matplotlib.patches.Rectangle(origin, fr["w"],
                                 fr["h"], fill=False, linewidth=2, color='b')
-        
+
         ax.axes.add_patch(rectangle)
         ax.text(origin[0], origin[1], "%s"%(fa),
                     fontsize=10, weight="bold", va="bottom")
 
         ax.axis("off")
 
-       
+
 
         # Current date now
         now = datetime.now()
-        
+
         # Save file as date and time now to keep it unique
         image_filename = now.strftime("%d_%m_%Y%H_%M_%S")
 
         # Save the image to the static folder
         plt.savefig('static/' + image_filename)
 
-    # Return the filename    
+    # Return the filename
     return image_filename
 
 #---------------------------------------------------------------------------------------------------------------------#
@@ -476,15 +475,15 @@ def translate_image_url():
             messages = []
             for i in result_list[0]['translations']:
                 messages.append(i['text'])
-            
+
 
             print("Messages: ", messages[0])
 
-            print("TRANSLATED TEXT: ", messages) 
+            print("TRANSLATED TEXT: ", messages)
 
             #render_translation_url(messages, web_url, target_language)
             #saved_translation_image = "/static/" + target_language + ".png"
-            
+
 
             return render_template("translate_url.html", image_uri=web_url, target_language=target_language, messages=messages)
 
@@ -632,8 +631,8 @@ def landmark_image_url():
                         analyze_dict['computer_vision_API'][0]['params'] )
 
             print("Analyze result: ", analyze_result)
-            
-            
+
+
 
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # Landmark request
@@ -641,8 +640,8 @@ def landmark_image_url():
             # If landmark detected
             try:
 
-                if ( analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] ):     
-                    
+                if ( analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] ):
+
                     #analyze_result_text = analyze_result['categories'][0]["detail"]['landmarks'][0]['name']
                     print("Analyse result text below: ", analyze_result['categories'][0]["detail"]['landmarks'][0]['name'])
                     messages = [analyze_result['categories'][0]["detail"]['landmarks'][0]['name']]
@@ -654,7 +653,7 @@ def landmark_image_url():
             except:
 
                 try:
-                        
+
                     if(analyze_result['categories'][0]):
 
                         tags = []
@@ -662,7 +661,7 @@ def landmark_image_url():
                         for i in analyze_result['description']['tags']:
 
                             tags.append(i.upper() + '\n')
-                            
+
 
                     messages = ["No landmark detected. Objects detected:  ", tags]
                     return render_template("landmark_url.html", image_uri= landmark_url, messages=messages)
@@ -674,7 +673,7 @@ def landmark_image_url():
                             messages = ["No landmark detected.", ['description']['tags'][0]]
                             print( analyze_result['categories'] )
                             return render_template("landmark_url.html", image_uri= landmark_url, messages=messages)
-                
+
 
                     except:
                         try:
@@ -687,8 +686,8 @@ def landmark_image_url():
                             messages = ['ERROR']
                             return render_template("landmark_url.html", image_uri=landmark_url, messages=messages)
 
-                
-                        
+
+
     else:
         messages = ['Please enter an image URL']
         return render_template("landmark_url.html", image_uri=landmark_url, messages=messages)
@@ -719,31 +718,31 @@ def landmark_image_upload():
     'Content-Type': 'application/octet-stream',
     'Ocp-Apim-Subscription-Key': _key
     }
-        
-   
+
+
    # Post image to API and get result
     analyze_result = processRequest(analyze_dict['computer_vision_API'][0]['url'],
                 json,
                 data,
-                landmark_upload_headers, 
+                landmark_upload_headers,
                 analyze_dict['computer_vision_API'][0]['params'] )
 
-  
+
 
     # If landmark detected
     try:
 
 
-        if ( analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] ):    
+        if ( analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] ):
 
             print("Analyse result text landmark: ", analyze_result['categories'][0]["detail"]['landmarks'][0]['name'])
             messages = [analyze_result['categories'][0]["detail"]['landmarks'][0]['name']]
 
             print("Landmark messages: ", messages)
             # Render image with result text
-            
+
             render_url_test = render_upload_image(analyze_result['categories'][0]["detail"]['landmarks'][0]['name'], landmark_upload_image.blob)
-            
+
             saved_landmark_image = "/static/" + analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] + ".png"
             print("Under saved landmark image")
             return render_template("landmark_upload.html", image_uri= saved_landmark_image, messages=messages)
@@ -752,14 +751,14 @@ def landmark_image_upload():
         print("IN first except")
 
         try:
-     
+
             if(analyze_result['categories'][0]):
 
                 tags = []
 
                 for i in analyze_result['description']['tags']:
                     tags.append(i.upper() + '\n')
-                            
+
 
                 messages = ["No landmark detected. Objects detected:  ", tags]
                 return render_template("landmark_upload.html", image_uri= landmark_upload_image.uri, messages=messages)
@@ -773,7 +772,7 @@ def landmark_image_upload():
                     messages = ["No landmark detected.", ['description']['tags'][0]]
                     print( analyze_result['categories'] )
                     return render_template("landmark_upload.html", image_uri= landmark_upload_image.uri, messages=messages)
-                
+
 
             except:
 
@@ -790,7 +789,7 @@ def landmark_image_upload():
                     messages = ['ERROR']
                     return render_template("landmark_upload.html", image_uri=landmark_upload_image.uri, messages=messages)
 
-#-------------------------------------------------------------------------------------------------------------------------------------------# 
+#-------------------------------------------------------------------------------------------------------------------------------------------#
 # Object Detection API
 
 # GET and POST to landmark image URL (Computer Vision API)
@@ -824,21 +823,21 @@ def object_detect_url():
             detect_json = { 'url': web_url }
             data = None
 
-           
+
             # Object detection result
-            detection_result = processRequest(detect_dict['object_detection_API'][0]['url'], 
-                        detect_json, 
-                        data, 
-                        detect_dict['object_detection_API'][0]['headers'], 
+            detection_result = processRequest(detect_dict['object_detection_API'][0]['url'],
+                        detect_json,
+                        data,
+                        detect_dict['object_detection_API'][0]['headers'],
                         detect_dict['object_detection_API'][0]['params'] )
-            
+
             print("Detection result: ", detection_result)
 
 
             detection_text_list = []
             for i in detection_result['objects']:
                 detection_text_list.append(i['object'])
-                listToStr = ' '.join([str(elem) for elem in detection_text_list]) 
+                listToStr = ' '.join([str(elem) for elem in detection_text_list])
 
             print("Detection list: ", detection_text_list)
 
@@ -849,8 +848,8 @@ def object_detect_url():
 
             else:
                 print("Not empty.")
-                        
-            
+
+
 
 # Object detection request url
 
@@ -861,7 +860,7 @@ def object_detect_url():
                     saved_image = "/static/" + detection_text_list[0] + ".png"
                     return render_template("object_detect_url.html", image_uri= saved_image, messages=messages)
                     #os.remove(path='/static/object.png')
-                            
+
 
                 except:
                     messages = ['Something went wrong.']
@@ -871,7 +870,7 @@ def object_detect_url():
         messages = ['Please enter an image URL']
         return render_template("object_detect_url.html", image_uri=web_url, messages=messages)
 
-       
+
 
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # GET and POST to object detection image upload (Object detection API)
@@ -898,23 +897,23 @@ def object_detect_upload():
     'Content-Type': 'application/octet-stream',
     'Ocp-Apim-Subscription-Key': _key
     }
-        
-   
+
+
     try:
         # Object detection result
-        detection_result = processRequest(detect_dict['object_detection_API'][0]['url'], 
-                            detect_json, 
-                            data, 
-                            object_detect_upload_headers, 
+        detection_result = processRequest(detect_dict['object_detection_API'][0]['url'],
+                            detect_json,
+                            data,
+                            object_detect_upload_headers,
                             detect_dict['object_detection_API'][0]['params'] )
-                
+
         print("Detection result: ", detection_result)
 
 
         detection_text_list = []
         for i in detection_result['objects']:
             detection_text_list.append(i['object'])
-        listToStr = ' '.join([str(elem) for elem in detection_text_list]) 
+        listToStr = ' '.join([str(elem) for elem in detection_text_list])
 
 
         if(detection_text_list == [] or detection_result == None):
@@ -925,20 +924,20 @@ def object_detect_upload():
         else:
             print("Detection list: ", detection_text_list[0])
             print("Not empty.")
-                            
-                
+
+
     # Object detection request upload
 
             try:
                 messages = ["Objects detected: ", detection_text_list ]
-                
+
                 image_filename = render_object_detection_upload(detection_result, detect_upload_image.blob)
-               
+
                 # Get saved image from static folder
                 image_with_result = "/static/" + image_filename + ".png"
                 return render_template("object_detect_upload.html", image_uri= image_with_result, messages=messages)
-                
-                                
+
+
 
             except:
                 messages = ['Something went wrong.']
@@ -960,11 +959,11 @@ def sentiment_analysis(text, language):
     {"id": "1", "language": language,
         "text": text}
               ]}
-  
-  response = requests.post(sentiment_dict['sentiment_analytics_API'][0]['url'], 
-                           headers=sentiment_dict['sentiment_analytics_API'][0]['headers'], 
+
+  response = requests.post(sentiment_dict['sentiment_analytics_API'][0]['url'],
+                           headers=sentiment_dict['sentiment_analytics_API'][0]['headers'],
                            json=documents)
-  
+
   sentiment_result = response.json()
 
   return sentiment_result
@@ -997,7 +996,7 @@ def sentiment():
         convert_to_json = j.dumps(sentiment_text)
 
         print("Sentiment text type", type(sentiment_text))
-        
+
         print("NOT EMPTY", sentiment_text)
         body = [{'text': convert_to_json}]
         data = None
@@ -1007,7 +1006,7 @@ def sentiment():
         params = '&to='+ 'en'
 
         print("Params", params)
-    
+
         translation_result = translate_text2(translator_dict['translator_text_API'][0]['_key'], params, data, body)
 
         print("Translated result", translation_result)
@@ -1024,7 +1023,7 @@ def sentiment():
 
         print("Score: ", sentiment_result['documents'][0]['score'])
 
-        # Formatting the score to % 
+        # Formatting the score to %
         sentiment_score = round( round(sentiment_result['documents'][0]['score'], 2) * 100 )
 
 
@@ -1035,7 +1034,7 @@ def sentiment():
             else:
                 messages = [f"This is probably a negative sentence with a {sentiment_score} % sentiment score."]
 
-            
+
         return render_template("sentiment.html",  messages=messages)
 
     else:
@@ -1044,16 +1043,15 @@ def sentiment():
         return render_template("sentiment.html", messages=messages)
 
 
-    
 
 
 
-  
 
-    
 
-            
-      
-        
 
-                        
+
+
+
+
+
+

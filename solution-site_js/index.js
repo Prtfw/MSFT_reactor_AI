@@ -1,5 +1,5 @@
 // load env var
-require('dotenv').config({path: '.env'})
+require('dotenv').config({path: './../.env'})
 
 
 // Init express
@@ -60,6 +60,7 @@ const translate_key = process.env.translate_key
 const _sentiment_key = process.env._sentiment_key
 
 const _base_url = process.env.base_url
+console.log(63, _base_url,api_key )
 
 const _sentiment_url = process.env._sentiment_url
 
@@ -76,20 +77,20 @@ const fetch = require("node-fetch");
 const text_recognition_url = _base_url + '/vision/v3.0/read/analyze'
 
 // Foundation url for azure account
-const azure_base_url = 'https://maddogtest.cognitiveservices.azure.com/'
+const azure_base_url = _base_url //'https://maddogtest.cognitiveservices.azure.com/'
 
 // Computer Vision API
 const analyze_endpoint = azure_base_url + '/vision/v3.0/analyze'
 
 // Cognitive API for Translator Text
-const translator_text_url = 'https://api.cognitive.microsofttranslator.com/' + '/translate?api-version=3.0'
+const translator_text_url = 'https://api.cognitive.microsofttranslator.com' + '/translate?api-version=3.0'
 
 // Translation API
 let translation_endpoint = 'https://api.cognitive.microsofttranslator.com/'
 
 // Sentiment API
-const sentiment_url = 'https://maddog-text-analytics.cognitiveservices.azure.com/' + '/text/analytics/v2.1/sentiment'
-
+const sentiment_url = _sentiment_url + '/text/analytics/v2.1/sentiment'
+// 'https://maddog-text-analytics.cognitiveservices.azure.com/'
 // General headers for API
 const headers = {
     'Content-Type': 'application/json',
@@ -158,7 +159,7 @@ app.get('/landmark_url', function (req, res) {
   res.render('landmark_upload', {result: '', image_file: image_file});
   console.log("GET LANDMARK URL")
  });
- 
+
  app.get('/object_detect_url', function (req, res) {
 
   res.render('object_detect_url', {result: '', web_url: image_file});
@@ -289,7 +290,7 @@ const process_text_final_response = async (response_headers) => {
     },
     headers: {
       'Ocp-Apim-Subscription-Key': translate_key,
-      'Ocp-Apim-Subscription-Region': 'eastus',
+      'Ocp-Apim-Subscription-Region': 'useast',
       'Content-type': 'application/json',
       'X-ClientTraceId': '315abf80-187a-4df1-89d3-bcf7f15cac36'
     },
@@ -299,6 +300,7 @@ const process_text_final_response = async (response_headers) => {
     })
 
     // Translate result
+    console.log(303, translation_response)
     const translate_result = await translation_response.json()
 
     // True or false for result
@@ -417,7 +419,7 @@ params: {
 },
 headers: {
   'Ocp-Apim-Subscription-Key': translate_key,
-  'Ocp-Apim-Subscription-Region': 'eastus',
+  'Ocp-Apim-Subscription-Region': 'australiaeast',
   'Content-type': 'application/json',
   'X-ClientTraceId': '315abf80-187a-4df1-89d3-bcf7f15cac36' // uuidv4().toString()
 },
@@ -482,10 +484,10 @@ app.post('/landmark_url', async (req, res) => {
       landmark_url_result = await response.json()
 
 
-     
+
       landmark_result_to_html = landmark_url_result.categories[0].detail.landmarks[0].name
       console.log("TRANSLATE RESULT", landmark_result_to_html)
-  
+
       res.render('landmark_url', {result: landmark_result_to_html, web_url: web_url})
       }
 
@@ -541,7 +543,7 @@ app.post('/landmark_upload', upload, async (req, res) => {
 
     landmark_result_to_html = landmark_upload_result.categories[0].detail.landmarks[0].name
     console.log("TRANSLATE RESULT", landmark_result_to_html)
-  
+
     res.render('landmark_upload', {result: landmark_result_to_html, image_file: `uploads/${req.file.filename}`})
     }
 
@@ -686,7 +688,7 @@ app.post('/object_detect_upload', upload, async (req, res) => {
 
     else{
       console.log("Objects detected")
-    
+
       res.render('object_detect_upload', {result: object_to_html_list, image_file: `uploads/${req.file.filename}`})
   }
     }
@@ -740,17 +742,18 @@ params: {
 },
 headers: {
   'Ocp-Apim-Subscription-Key': translate_key,
-  'Ocp-Apim-Subscription-Region': 'eastus',
+  'Ocp-Apim-Subscription-Region': 'australiaeast',
   'Content-type': 'application/json',
   'X-ClientTraceId': '315abf80-187a-4df1-89d3-bcf7f15cac36' // uuidv4().toString()
 },
 body: JSON.stringify([{
       'text': sentiment_text
 }])
-})
+}).catch(err=> console.log(err))
 
 // Translate result
 const translate_result = await response.json()
+console.log(754, translate_result)
 
 // Extract text with translated lines from translate_result
 translate_result_to_html = translate_result[0].translations[0].text
@@ -760,10 +763,11 @@ translate_result_to_html = translate_result[0].translations[0].text
 translate_text = translate_result_to_html.replace("[","").replace("]","").
 replace('"','').replace('"','').replace(',','').replace('"','').replace('"','')
 
+console.log(765, sentiment_url)
 
 // Sentiment API
   const sentiment_response = await fetch(sentiment_url, {
-    method: 'POST', 
+    method: 'POST',
     headers: {
       'Ocp-Apim-Subscription-Key': _sentiment_key,
       'Content-type': 'application/json',
@@ -778,7 +782,7 @@ replace('"','').replace('"','').replace(',','').replace('"','').replace('"','')
                   ]
                 }
       )
-  })
+  }).catch(err=>console.log(err))
 
   const sentiment_result = await sentiment_response.json()
 
