@@ -172,11 +172,11 @@ app.get("/sentiment", async (req, res) => {
 // Translation from uploaded picture
 app.post("/translate_upload", upload, async (req, res) => {
   /*
-  @hint
+  @hint: look for @student tags
 
    - TODO: fill out the submitImageForProcessing fn to make a POST call to the text recongition api
-   - TODO: fill out the extractTextFromImage fn to get only the translated text lines from translate_result in the format translate_result[0].translations[0].text
-
+   - TODO: fill out the extractTextFromImage fn
+   - TODO: fill out the translation_response to get translated text
   */
 
   const targetLanguage = req.body.target_language;
@@ -256,37 +256,19 @@ app.post("/translate_upload", upload, async (req, res) => {
   url.search = new URLSearchParams(params).toString();
 
   // Translation API call
-  const translation_response = await fetch(url, {
-    method: "POST",
-    baseUrl: translationUrl,
-    url: "translate",
-    params: {
-      "api-version": "3.0",
-      to: [targetLanguage]
-    },
-    headers: {
-      "Ocp-Apim-Subscription-Key": translateKey,
-      "Ocp-Apim-Subscription-Region": "australiaeast",
-      "Content-type": "application/json",
-      "X-ClientTraceId": "315abf80-187a-4df1-89d3-bcf7f15cac36"
-    },
-    body: JSON.stringify([
-      {
-        text: extractedText
-      }
-    ])
-  });
+  const translation_response =
+    "@student await the post call to the translate endpoint (see url above) here";
 
   // Result with translated text
   const translateResult = await translation_response.json();
 
-  // TODO: Use translate_result to detect if a translation is found in the format translate_result[0].detectedLanguage.score
+  // Use translate_result to detect if a translation is found in the format translate_result[0].detectedLanguage.score
   // score 0 = Could not find any text to translate
   // score 1 = Found text to translate
-  let translationScore = "";
+  let translationScore = translate_result[0].detectedLanguage.score;
 
-  // TODO: Extract only the translated text lines from translate_result in the format translate_result[0].translations[0].text
-  translateResultToView = "";
+  // Extract only the translated text lines from translate_result in the format translate_result[0].translations[0].text
+  translateResultToView = translate_result[0].translations[0].text;
 
   // If there is no translated result
   if (translationScore == 0) {
@@ -310,7 +292,8 @@ app.post("/translate_url", async (req, res) => {
   @hint
 
    - TODO: fill out the submitImageUrlForProcessing fn to make a POST call to the text recongition api
-   - TODO: fill out the extractTextFromImageUrl fn to get only the translated text lines from translate_result in the format translate_result[0].translations[0].text
+   - TODO: fill out the extractTextFromImageUrl fn
+   - TODO: fill out the translation_response to get translated text
 
   */
   // Extract the text from the image
@@ -341,29 +324,19 @@ app.post("/translate_url", async (req, res) => {
     extractedTextList = extractedTextList.join(" ");
     extractedTextList = JSON.stringify(extractedTextList);
 
-    console.log(116, "RETURN RESULT: ", extractedTextList);
-
     return Promise.resolve(extractedTextList);
   };
 
   // Process image
   const submitImageUrlForProcessing = async (endpoint, json, headers) => {
     let result = ["some", "list", "of", "words"];
-    const response =
+    const response_headers =
       "@student await the result of the POST call to the 'endpoint' here ";
-    response_headers = response.headers.get("Operation-Location", headers);
 
     // Use response headers to extract the text from the image and return result
     result = await extractTextFromImageUrl(response_headers);
     return Promise.resolve(result);
   };
-  /*
-  @hint
-
-  - TODO: fill out the submit_image_url_for_processing fn to make a POST call to the text recongition api
-  - TODO: fill out the extractTextFromImageUrl fn to get only the translated text lines from translate_result in the format translate_result[0].translations[0].text
-
-  */
 
   // Choosen target language from form
   const targetLanguage = req.body.target_language;
@@ -400,34 +373,14 @@ app.post("/translate_url", async (req, res) => {
     url.search = new URLSearchParams(params).toString();
 
     // Translation API call
-    const translation_response = await fetch(url, {
-      method: "POST",
-      baseUrl: translationUrl,
-      url: "translate",
-      params: {
-        "api-version": "3.0",
-        to: [targetLanguage]
-      },
-      headers: {
-        "Ocp-Apim-Subscription-Key": translateKey,
-        "Ocp-Apim-Subscription-Region": "australiaeast",
-        "Content-type": "application/json",
-        "X-ClientTraceId": "315abf80-187a-4df1-89d3-bcf7f15cac36"
-      },
-      body: JSON.stringify([
-        {
-          text: extractedText
-        }
-      ])
-    });
+    const translation_response =
+      "@student await the post call to the translate endpoint (see url above) here";
 
-    // TODO: Use translate_result to detect if a translation is found in the format translate_result[0].detectedLanguage.score
-    // score 0 = Could not find any text to translate
-    // score 1 = Found text to translate
-    let translationScore = "";
+    const translate_result = await translation_response.json();
 
-    // TODO: Extract only the translated text lines from translate_result in the format translate_result[0].translations[0].text
-    let translateResultToView = "";
+    let translationScore = translate_result[0].detectedLanguage.score;
+
+    let translateResultToView = translate_result[0].translations[0].text;
 
     // If there is no translated result
     if (translationScore == 0) {
