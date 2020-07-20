@@ -1,5 +1,5 @@
 // load env variables
-require("dotenv").config({ path: ".env" });
+require("dotenv").config({ path: "./../.env" });
 
 // Load libraries
 const fetch = require("node-fetch");
@@ -52,9 +52,6 @@ const sentimentKey = process.env._sentiment_key;
 const baseUrl = process.env.base_url;
 
 /*API**********************************************************************************************/
-
-// Add your foundation url for  your azure account here
-//const _base_url = 'https://yourazureaccount.cognitiveservices.azure.com/'
 
 const sentimentBaseUrl =
   "https://youraccount-text-analytics.cognitiveservices.azure.com/";
@@ -177,8 +174,8 @@ app.post("/translate_upload", upload, async (req, res) => {
   /*
   @hint
 
-  - TODO: Use translate_result to detect if a translation is found in the format translate_result[0].detectedLanguage.score
-  - TODO: Extract only the translated text lines from translate_result in the format translate_result[0].translations[0].text
+   - TODO: fill out the submitImageForProcessing fn to make a POST call to the text recongition api
+   - TODO: fill out the extractTextFromImage fn to get only the translated text lines from translate_result in the format translate_result[0].translations[0].text
 
   */
 
@@ -193,39 +190,26 @@ app.post("/translate_upload", upload, async (req, res) => {
 
   // Process the image
   const submitImageForProcessing = async (endpoint, data) => {
-    const response = await fetch(endpoint, {
-        method: "POST",
-        params: {
-          visualFeatures: "Categories,Description,Color",
-          details: "",
-          language: "en"
-        },
-        headers: blobHeaders,
-        body: data
-      }),
-      responseHeaders = response.headers.get(
-        "Operation-Location",
-        blobHeaders
-      );
+    let result = ["some", "list", "of", "words"];
+    const response =
+      "@student await the result of the POST call to the 'endpoint' here ";
+    responseHeaders = response.headers.get("Operation-Location", blobHeaders);
 
     // Result is the extracted text
-    result = extractTextFromImage(responseHeaders);
+    result = await extractTextFromImage(responseHeaders);
 
-    return result;
+    return Promise.resolve(result);
   };
 
   // Extract text from images API (OCR)
-  const extractTextFromImage = async responseHeaders => {
+  const extractTextFromImage = async response_url => {
     console.log("in process text function");
 
-    const result = {};
+    let result = {};
 
     while (true) {
-      const response = await fetch(responseHeaders, {
-        method: "GET",
-        headers: blobHeaders,
-        location: "Operation-Location"
-      });
+      const response =
+        "@student await the result of the GET call to the 'response_url' here ";
 
       result = await response.json();
 
@@ -249,7 +233,7 @@ app.post("/translate_upload", upload, async (req, res) => {
     extractedTextList = JSON.stringify(extractedTextList);
 
     // Return the extracted text
-    return extractedTextList;
+    return Promise.resolve(extractedTextList);
   };
 
   // Save the extracted text from the result
@@ -325,8 +309,59 @@ app.post("/translate_url", async (req, res) => {
   /*
   @hint
 
-  - TODO: Use translate_result to detect if a translation is found in the format translate_result[0].detectedLanguage.score
-  - TODO: Extract only the translated text lines from translate_result in the format translate_result[0].translations[0].text
+   - TODO: fill out the submitImageUrlForProcessing fn to make a POST call to the text recongition api
+   - TODO: fill out the extractTextFromImageUrl fn to get only the translated text lines from translate_result in the format translate_result[0].translations[0].text
+
+  */
+  // Extract the text from the image
+  const extractTextFromImageUrl = async response_url => {
+    result = {};
+    while (true) {
+      const response =
+        "@student await the result of the GET call to the 'response_url' here ";
+
+      result = await response.json();
+
+      if ("analyzeResult" in result) {
+        break;
+      }
+
+      if ("status" in result && result.status == "failed") {
+        break;
+      }
+    }
+
+    result = result.analyzeResult.readResults[0].lines;
+    let extractedTextList = [];
+    for (const i in result) {
+      words = result[i].text;
+      words = words.toLowerCase();
+      extractedTextList.push(words);
+    }
+    extractedTextList = extractedTextList.join(" ");
+    extractedTextList = JSON.stringify(extractedTextList);
+
+    console.log(116, "RETURN RESULT: ", extractedTextList);
+
+    return Promise.resolve(extractedTextList);
+  };
+
+  // Process image
+  const submitImageUrlForProcessing = async (endpoint, json, headers) => {
+    let result = ["some", "list", "of", "words"];
+    const response =
+      "@student await the result of the POST call to the 'endpoint' here ";
+    response_headers = response.headers.get("Operation-Location", headers);
+
+    // Use response headers to extract the text from the image and return result
+    result = await extractTextFromImageUrl(response_headers);
+    return Promise.resolve(result);
+  };
+  /*
+  @hint
+
+  - TODO: fill out the submit_image_url_for_processing fn to make a POST call to the text recongition api
+  - TODO: fill out the extractTextFromImageUrl fn to get only the translated text lines from translate_result in the format translate_result[0].translations[0].text
 
   */
 
@@ -334,7 +369,7 @@ app.post("/translate_url", async (req, res) => {
   const targetLanguage = req.body.target_language;
 
   // Pasted image url from form
-  webUrl = req.body.web_url;
+  let webUrl = req.body.web_url;
 
   // If no image url is pasted
   if (webUrl == "") {
@@ -345,58 +380,8 @@ app.post("/translate_url", async (req, res) => {
       web_url: webUrl
     });
   } else {
-    // Process image
-    const submit_image_url_for_processing = async (endpoint, json, headers) => {
-      const response = await fetch(endpoint, {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify({ url: json })
-        }),
-        response_headers = response.headers.get("Operation-Location", headers);
-
-      // Use response headers to extract the text from the image and return result
-      result = extractTextFromImageUrl(response_headers);
-      return result;
-    };
-
-    // Extract the text from the image
-    const extractTextFromImageUrl = async response_headers => {
-      result = {};
-      while (true) {
-        const response = await fetch(response_headers, {
-          method: "GET",
-          headers: jsonHeaders,
-          location: "Operation-Location"
-        });
-
-        result = await response.json();
-
-        if ("analyzeResult" in result) {
-          break;
-        }
-
-        if ("status" in result && result.status == "failed") {
-          break;
-        }
-      }
-
-      result = result.analyzeResult.readResults[0].lines;
-      let extractedTextList = [];
-      for (const i in result) {
-        words = result[i].text;
-        words = words.toLowerCase();
-        extractedTextList.push(words);
-      }
-      extractedTextList = extractedTextList.join(" ");
-      extractedTextList = JSON.stringify(extractedTextList);
-
-      console.log(116, "RETURN RESULT: ", extractedTextList);
-
-      return extractedTextList;
-    };
-
     // Save the extracted text from the result
-    const extractedText = await submit_image_url_for_processing(
+    const extractedText = await submitImageUrlForProcessing(
       textRecognitionUrl,
       webUrl,
       jsonHeaders
@@ -484,15 +469,15 @@ app.post("/landmark_url", async (req, res) => {
     // If landmark is found
     try {
       const response = await fetch(url, {
-          method: "POST",
-          headers: headers,
-          params: {
-            visualFeatures: "Categories,Description,Color"
-          },
-          body: JSON.stringify({ url: webUrl })
-        }),
-        // Translate result
-        const landmarkUrlResult = await response.json();
+        method: "POST",
+        headers: headers,
+        params: {
+          visualFeatures: "Categories,Description,Color"
+        },
+        body: JSON.stringify({ url: webUrl })
+      });
+      // Translate result
+      const landmarkUrlResult = await response.json();
 
       const landmarkResultToHtml =
         landmarkUrlResult.categories[0].detail.landmarks[0].name;
@@ -538,15 +523,15 @@ app.post("/landmark_upload", upload, async (req, res) => {
   // If landmark is found
   try {
     const response = await fetch(url, {
-        method: "POST",
-        headers: headers,
-        params: {
-          visualFeatures: "Categories,Description,Color"
-        },
-        body: data
-      }),
-      // Translate result
-      const landmarkUploadResult = await response.json();
+      method: "POST",
+      headers: headers,
+      params: {
+        visualFeatures: "Categories,Description,Color"
+      },
+      body: data
+    });
+    // Translate result
+    const landmarkUploadResult = await response.json();
 
     const landmarkResultToHtml =
       landmarkUploadResult.categories[0].detail.landmarks[0].name;
