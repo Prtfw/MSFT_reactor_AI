@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<div class="container text-center">
+    <h1>Contoso Travel</h1>
+    <h3>Upload a photo and test your custom vision model</h3>
+    <h4>It may take up to 1 minute to process your image</h4>
+</div>
+{% endblock %}
+
+{% block optional_form %}        
+
+<div style="display: none">
+    <input type="file" id="upload-file" name="file" accept=".jpg,.jpeg,.png,.gif">
+    <input type="submit" id="submit-button" value="Upload">
+</div>
+
+<img id="uploaded-image" src="{{ image_uri }}">
+<input type="button" id="upload-button" class="btn" value="Upload Photo">
+
+
+{% endblock %}
+
+{% block optional_scripts %}
+{# Reset to selected language #}
+
+{% endblock %}

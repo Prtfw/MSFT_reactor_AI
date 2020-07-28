@@ -11,7 +11,7 @@
         <%- include('partials/banner.ejs') %>
         <div class="container text-center">
             <h1>Contoso Travel</h1>
-            <h3>Evaluate a text and return a sentiment score!</h3>
+            <h3>Paste an image URL and test your custom vision model!</h3>
         </div>
     </div>
     
@@ -19,14 +19,14 @@
         <div class="row">
             <div class="col-sm-12 text-center">
                 
-                <form method="POST" action="/sentiment" name ="frm">
+                <form method="POST" action="/custom_vision_url" name ="frm">
 
-                <input type="text" class="form-control" id="sentiment_text" name="sentiment_text" placeholder="Write your text here">
-                <input type="submit" id="submit-url-button" class="btn" value="Load text"  >
+                <input type="url" class="form-control" id="web_url" name="web_url" placeholder="Add image url here">
+                <input type="submit" id="submit-url-button" class="btn" value="Load URL image"  >
 
                   
                     <div style="display: none">
-                        <input type="text" id="upload-url" name="sentiment_text" accept=".jpg,.jpeg,.png,.gif" placeholder="Load text">
+                        <input type="url" id="upload-url" name="url" accept=".jpg,.jpeg,.png,.gif" placeholder="Add image url here">
                     </div>
 
                     <div style="display: none">
@@ -37,6 +37,7 @@
                         <img id="uploaded-image-url" >
                         <input type="button" id="upload-url-button" class="btn" value="Load URL image">
                     </div>
+                    <img id="uploaded-image" src="<%= web_url %>">
                 
                 </form>
             </div>

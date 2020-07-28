@@ -3,13 +3,14 @@
 {% block header %}
 <div class="container text-center">
     <h1>Contoso Travel</h1>
-    <h3>Paste an image URL and detect a landmark!</h3>
+    <h3>Paste an image URL and test your custom vision model!</h3>
+    <h4>It may take up to 1 minute to process your image</h4>
 </div>
 {% endblock %}
 ​
 {% block optional_form %}
                 
-    <input type="text" class="form-control" id="landmark_url" name="landmark_url" placeholder="Add image url here">
+    <input type="text" class="form-control" id="custom_vision_url" name="custom_vision_url" placeholder="Add image url here">
     <input type="submit" id="submit-url-button" value="Upload image URL">
         
         
@@ -25,7 +26,7 @@
 {% block optional_scripts %}
 {# Reset to selected language #}
 <script>
-    $("#landmark_url").val("{{ landmark_url }}");
+    $("#custom_vision_url").val("{{ custom_vision_url }}");
 </script>
 
 {% endblock %}

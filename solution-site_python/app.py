@@ -3,15 +3,16 @@ from flask import Flask, render_template, request
 
 # Load system variables with dotenv
 from dotenv import load_dotenv
-load_dotenv('./../.env')
+load_dotenv()
 
 import image_helper
 import json as j
 import uuid
 import time
-
+import os
 import operator
 import numpy as np
+import random
 import datetime
 from datetime import datetime
 
@@ -27,7 +28,6 @@ from PIL import JpegImagePlugin
 import io
 from io import BytesIO
 
-
 import pprint
 from pprint import pprint
 
@@ -41,12 +41,23 @@ _key = os.environ["_key"]
 translate_key = os.environ["translate_key"]
 
 # Key sentiment
-_sentiment_key = os.environ["_sentiment_key"]
-
+_sentiment_key = os.environ["sentiment_key"]
 
 _base_url = os.environ["base_url"]
 
-_sentiment_url = os.environ["_sentiment_url"]
+_sentiment_url = os.environ["sentiment_url"]
+
+# Custom vision key
+training_key = os.environ["training_key"]
+
+# Custom vision key
+prediction_key = os.environ["prediction_key"]
+
+# Custom vision key
+prediction_resource_id = os.environ["prediction_resource_id"]
+
+# Project ID Custom Vision
+project_id = os.environ["sampleProject"]
 
 
 COGSVCS_CLIENTURL = _base_url
@@ -57,6 +68,21 @@ COGSVCS_REGION = 'eastus'
 from msrest.authentication import CognitiveServicesCredentials
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import ComputerVisionErrorException
+
+
+
+# Create the Custom Vision project
+from azure.cognitiveservices.vision.customvision.training import CustomVisionTrainingClient
+from azure.cognitiveservices.vision.customvision.training.models import ImageFileCreateBatch, ImageFileCreateEntry
+from azure.cognitiveservices.vision.customvision.prediction import CustomVisionPredictionClient
+from msrest.authentication import ApiKeyCredentials
+
+# Custom vision endpoint
+custom_vision_endpoint = "https://eastus.api.cognitive.microsoft.com/"
+
+# Custom Vision project name
+publish_iteration_name = "classifyModel"
+
 
 vision_credentials = CognitiveServicesCredentials(COGSVCS_KEY)
 vision_client = ComputerVisionClient(COGSVCS_CLIENTURL, vision_credentials)
@@ -76,38 +102,38 @@ headers = {
 #---------------------------------------------------------------------------------------------------------------------#
 # Endpoint dictionaries
 
-# Cognitive API for Computer Vision
+# Cognitive API for Computer Vision image URL
 analyze_dict = {'computer_vision_API':
                     [{'url': _base_url + '/vision/v3.0/analyze',
                       '_key': _key,
                       'headers': headers,
                       'params': {'visualFeatures': 'Categories,Description,Color'}}]}
 
-# Custom Vision API - Object Detection
+# Custom Vision API - Object Detection image URL
 detect_dict = {'object_detection_API':
                    [{'url': _base_url + 'vision/v3.0/detect',
                      '_key': _key,
                      'headers': headers,
                      'params': {'visualFeatures': 'Objects,Description'}}]}
 
-# OCR API
+# OCR API image URL
 text_recognition_dict = {'text_recognition_API':
                              [{'url': _base_url + '/vision/v3.0/read/analyze',
                                '_key': _key,
                                'headers': headers}]}
 
-# Cognitive API for Translator Text
+# Cognitive API for Translator Text image URL
 translator_dict = {'translator_text_API':
                        [{'url': 'https://api.cognitive.microsofttranslator.com/' + '/translate?api-version=3.0',
                          '_key': translate_key,
                          'headers': {
                              'Content-Type': 'application/json',
                              'Ocp-Apim-Subscription-Key': translate_key,
-                             'Ocp-Apim-Subscription-Region': 'eastus',
+                             'Ocp-Apim-Subscription-Region': 'australiaeast',
                              'X-ClientTraceId': str(uuid.uuid4())
                          }}]}
 
-# Cognitive API for Text Analytics
+# Cognitive API for Text Analytics image URL
 sentiment_dict = {'sentiment_analytics_API':
                       [{
                            'url': _sentiment_url + '/text/analytics/v2.1/sentiment',
@@ -136,6 +162,51 @@ def get_image(request):
         return Image()
 
 
+def processRequest(_url, json, data, headers, params ):
+
+    """
+    Helper function to process the request to Project Oxford
+
+    Parameters:
+    json: Used when processing images from its URL. See API Documentation
+    data: Used when processing image read from disk. See API Documentation
+    headers: Used to pass the key information and the data type request
+    """
+
+    retries = 0
+    result = None
+
+    while True:
+        response = requests.request( 'post', _url, json = json, data = data, headers = headers, params = params )
+
+        if response.status_code == 429:
+
+            print( "Message: %s" % ( response.json() ) )
+
+            if retries <= _maxNumRetries:
+                time.sleep(1)
+                retries += 1
+                continue
+            else:
+                print( 'Error: failed after retrying!' )
+                break
+
+        elif response.status_code == 200 or response.status_code == 201:
+            # print(response.json())
+            if 'content-length' in response.headers and int(response.headers['content-length']) == 0:
+                result = None
+            elif 'content-type' in response.headers and isinstance(response.headers['content-type'], str):
+                if 'application/json' in response.headers['content-type'].lower():
+                    result = response.json() if response.content else None
+                elif 'image' in response.headers['content-type'].lower():
+                    result = response.content
+        else:
+            print( "Error code: %d" % ( response.status_code ) )
+            print( "Message: %s" % ( response.json() ) )
+
+        break
+
+    return result
 
 # Display image from URL with resul text
 def render_image(result_title, image_url):
@@ -175,7 +246,6 @@ def render_upload_image(result_title, image_blob):
     image.close()
 
 
-# Does not work properly
 def render_translation_url(result_title, image_url, target_language):
 
     image = Image.open(BytesIO(requests.get(image_url).content))
@@ -289,8 +359,6 @@ def render_object_detection_upload(detection_result, image_blob):
 
         ax.axis("off")
 
-
-
         # Current date now
         now = datetime.now()
 
@@ -302,6 +370,34 @@ def render_object_detection_upload(detection_result, image_blob):
 
     # Return the filename
     return image_filename
+
+
+def custom_vision_render_image(image_filename, image_blob):
+
+    image = Image.open(image_blob)
+
+    fig, ax = plt.subplots(figsize=(4, 4), dpi=300)
+
+    ax.imshow( image )
+
+    plt.axis('off')
+
+    plt.savefig('static/' + image_filename)
+
+    image.close()
+
+
+def custom_vision_render_image_url(image_filename, image_url):
+
+    image = Image.open(BytesIO(requests.get(image_url).content))
+
+    fig, ax = plt.subplots(figsize=(4, 4), dpi=300)
+
+    ax.imshow( image )
+
+    plt.axis('off')
+
+    plt.savefig('static/' + image_filename)
 
 #---------------------------------------------------------------------------------------------------------------------#
 # Init application
@@ -323,10 +419,14 @@ def index():
 
 # Changed translate to translate upload
 @app.route("/translate_upload", methods=["GET", "POST"])
-def translate():
-    # Load image or placeholder
 
+
+def translate():
+
+    # Load image or placeholder
     image = get_image(request)
+
+    print("Get image request: ", image)
 
     # Set the default for language translation
     target_language = "en"
@@ -343,20 +443,31 @@ def translate():
     # Create a placeholder for messages
     messages = []
 
+    try:
 
-    # TODO: Add code to retrieve text from picture
-    messages = extract_text_from_image(image.blob, vision_client)
+        messages = extract_text_from_image_upload(image.blob, vision_client)
+        print("MESSAGES 1: ", messages)
 
-    print("IMAGE BLOB: ", image.blob)
+        messages = translate_text_upload(messages, target_language, COGSVCS_KEY, COGSVCS_REGION)
+        print("MESSAGES 2 translate text: ", messages)
 
-    # TODO: Add code to translate text
-    messages = translate_text(messages, target_language, COGSVCS_KEY, COGSVCS_REGION)
+        return render_template("translate_upload.html", image_uri=image.uri, target_language=target_language, messages=messages)
 
-    return render_template("translate_upload.html", image_uri=image.uri, target_language=target_language, messages=messages)
+    except ComputerVisionErrorException as e:
+        print(e)
+        return ["Computer Vision API error: " + e.message]
+
+
+    except Exception as error:
+        print("Exception error: ", error)
+        messages = ['Sorry something went wrong. ', error]
+        return render_template("translate_upload.html", image_uri=image.uri, target_language=target_language, messages=messages)
 
 
 # Extract text from image
-def extract_text_from_image(image, client):
+def extract_text_from_image_upload(image, client):
+
+    print("Extract text from image function. ")
     try:
         result = client.recognize_printed_text_in_stream(image=image)
 
@@ -373,19 +484,22 @@ def extract_text_from_image(image, client):
         print(e)
         return ["Computer Vision API error: " + e.message]
 
+
     except Exception as e:
         print(e)
         return ["Error calling the Computer Vision API"]
 
 
 # Translate text
-def translate_text(lines, target_language, key, region):
+def translate_text_upload(lines, target_language, key, region):
+
+    print("In function translate text! ")
     uri = "https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=" + target_language
 
 
-    headers = {
+    translate_headers = {
         'Ocp-Apim-Subscription-Key': translate_key,
-        'Ocp-Apim-Subscription-Region': 'eastus',
+        'Ocp-Apim-Subscription-Region': 'australiaeast',
         'Content-type': 'application/json'
     }
 
@@ -395,7 +509,7 @@ def translate_text(lines, target_language, key, region):
         input.append({ "text": line })
 
     try:
-        response = requests.post(uri, headers=headers, json=input)
+        response = requests.post(uri, headers=translate_headers, json=input)
         response.raise_for_status() # Raise exception if call failed
         results = response.json()
 
@@ -418,6 +532,7 @@ def translate_text(lines, target_language, key, region):
 #---------------------------------------------------------------------------------------------------------------------#
 
 @app.route("/translate_url", methods=["GET", "POST"])
+
 def translate_image_url():
 
     image = get_image(request)
@@ -433,7 +548,6 @@ def translate_image_url():
     if request.form and ("target_language" in request.form or "web_url" in request.form):
         target_language = request.form["target_language"]
         web_url = request.form["web_url"]
-        print(49,'now call api with this img url', web_url)
 
         # If it"s a GET, just return the form
     if request.method == "GET":
@@ -444,9 +558,8 @@ def translate_image_url():
             json = { 'url': web_url }
             data = None
 
-            # TODO: Add code to retrieve text from picture
-            #messages = extract_text_from_image(image.blob, vision_client)
-            result = text_recognition(text_recognition_dict['text_recognition_API'][0]['url'],
+
+            result = extract_text_from_image(text_recognition_dict['text_recognition_API'][0]['url'],
                                             text_recognition_dict['text_recognition_API'][0]['headers'],
                                             json,
                                             data)
@@ -468,7 +581,7 @@ def translate_image_url():
             body = [{'text': convert_to_json}]
 
 
-            result_list = translate_text2(translator_dict['translator_text_API'][0]['_key'], params, data, body)
+            result_list = translate_text_url(translator_dict['translator_text_API'][0]['_key'], params, data, body)
 
 
             # Create a placeholder for messages
@@ -481,10 +594,6 @@ def translate_image_url():
 
             print("TRANSLATED TEXT: ", messages)
 
-            #render_translation_url(messages, web_url, target_language)
-            #saved_translation_image = "/static/" + target_language + ".png"
-
-
             return render_template("translate_url.html", image_uri=web_url, target_language=target_language, messages=messages)
 
 
@@ -494,7 +603,7 @@ def translate_image_url():
 
 
 
-def text_recognition(_url, headers, json, data):
+def extract_text_from_image(_url, headers, json, data):
 
     response = requests.request( 'post', _url, headers = headers, json = json, data = data)
     response.raise_for_status()
@@ -517,7 +626,7 @@ def text_recognition(_url, headers, json, data):
 
 
     # Helper function to translate text
-def translate_text2(translate_key, params, data, json):
+def translate_text_url(translate_key, params, data, json):
 
   constructed_url = translator_dict['translator_text_API'][0]['url'] + params
 
@@ -544,59 +653,12 @@ def translation_to_json(result):
 #---------------------------------------------------------------------------------------------------------------------#
 # Computer Vision API (landmark detection)
 
-def processRequest(_url, json, data, headers, params ):
-
-    """
-    Helper function to process the request to Project Oxford
-
-    Parameters:
-    json: Used when processing images from its URL. See API Documentation
-    data: Used when processing image read from disk. See API Documentation
-    headers: Used to pass the key information and the data type request
-    """
-
-    retries = 0
-    result = None
-
-    while True:
-        response = requests.request( 'post', _url, json = json, data = data, headers = headers, params = params )
-
-        if response.status_code == 429:
-
-            print( "Message: %s" % ( response.json() ) )
-
-            if retries <= _maxNumRetries:
-                time.sleep(1)
-                retries += 1
-                continue
-            else:
-                print( 'Error: failed after retrying!' )
-                break
-
-        elif response.status_code == 200 or response.status_code == 201:
-            # print(response.json())
-            if 'content-length' in response.headers and int(response.headers['content-length']) == 0:
-                result = None
-            elif 'content-type' in response.headers and isinstance(response.headers['content-type'], str):
-                if 'application/json' in response.headers['content-type'].lower():
-                    result = response.json() if response.content else None
-                elif 'image' in response.headers['content-type'].lower():
-                    result = response.content
-        else:
-            print( "Error code: %d" % ( response.status_code ) )
-            print( "Message: %s" % ( response.json() ) )
-
-        break
-
-    return result
-
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 
 # GET and POST to landmark image URL (Computer Vision API)
 @app.route("/landmark_url", methods=["GET", "POST"])
-def landmark_image_url():
 
-    '''WIP CODE'''
+def landmark_image_url():
 
     image = get_image(request)
 
@@ -618,12 +680,11 @@ def landmark_image_url():
         return render_template("landmark_url.html", image_uri=image.uri, landmark_url=landmark_url)
 
     if(landmark_url is not ''):
-            #print("NOT EMPTY", landmark_url)
+
             json = { 'url': landmark_url }
             data = None
 
-            # TODO: Add code to retrieve text from picture
-            #messages = extract_text_from_image(image.blob, vision_client)
+            # Process the request
             analyze_result = processRequest(analyze_dict['computer_vision_API'][0]['url'],
                         json,
                         data,
@@ -642,9 +703,11 @@ def landmark_image_url():
 
                 if ( analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] ):
 
-                    #analyze_result_text = analyze_result['categories'][0]["detail"]['landmarks'][0]['name']
                     print("Analyse result text below: ", analyze_result['categories'][0]["detail"]['landmarks'][0]['name'])
+
+                    # Landmark name
                     messages = [analyze_result['categories'][0]["detail"]['landmarks'][0]['name']]
+
                     # Render image with result text
                     render_url_test = render_image(analyze_result['categories'][0]["detail"]['landmarks'][0]['name'], landmark_url)
                     saved_landmark_image = "/static/" + analyze_result['categories'][0]["detail"]['landmarks'][0]['name'] + ".png"
@@ -706,7 +769,7 @@ def landmark_image_upload():
 
     ### IMPORTANT ###
 
-        # If it"s a GET, just return the form
+    # If it"s a GET, just return the form
     if request.method == "GET":
         return render_template("landmark_upload.html", image_uri=landmark_upload_image.uri)
 
@@ -794,6 +857,7 @@ def landmark_image_upload():
 
 # GET and POST to landmark image URL (Computer Vision API)
 @app.route("/object_detect_url", methods=["GET", "POST"])
+
 def object_detect_url():
 
     '''WIP CODE'''
@@ -855,11 +919,10 @@ def object_detect_url():
 
                 try:
                     messages = ["Objects detected: ", detection_text_list ]
-                    #render_object_image(detection_text_list, web_url, detection_text_list[0])
                     render_object_detection(detection_result, web_url, detection_text_list[0])
                     saved_image = "/static/" + detection_text_list[0] + ".png"
                     return render_template("object_detect_url.html", image_uri= saved_image, messages=messages)
-                    #os.remove(path='/static/object.png')
+
 
 
                 except:
@@ -951,25 +1014,8 @@ def object_detect_upload():
 #-------------------------------------------------------------------------------------------------------------------------------------------#
 # Sentiment analysis
 
-
-# # Cognitive API for Text Analytics
-def sentiment_analysis(text, language):
-
-  documents = {"documents": [
-    {"id": "1", "language": language,
-        "text": text}
-              ]}
-
-  response = requests.post(sentiment_dict['sentiment_analytics_API'][0]['url'],
-                           headers=sentiment_dict['sentiment_analytics_API'][0]['headers'],
-                           json=documents)
-
-  sentiment_result = response.json()
-
-  return sentiment_result
-
-
 @app.route("/sentiment", methods=["GET", "POST"])
+
 def sentiment():
 
    # Set the default for language translation
@@ -981,66 +1027,195 @@ def sentiment():
 
     if request.form and ("sentiment_text" in request.form):
         sentiment_text = request.form["sentiment_text"]
-        print(49,'now call api with this sentiment text', sentiment_text)
-
 
         # If it"s a GET, just return the form
     if request.method == "GET":
         return render_template("sentiment.html",sentiment_text=sentiment_text)
 
-    if(sentiment_text is not ''):
+        # # Cognitive API for Text Analytics
+    def sentiment_analysis(text, language):
 
-        messages = []
+        documents = {"documents": [
+            {"id": "1", "language": language,
+                "text": text}
+                    ]}
 
-        # Convert text to json
-        convert_to_json = j.dumps(sentiment_text)
+        response = requests.post(sentiment_dict['sentiment_analytics_API'][0]['url'],
+                                headers=sentiment_dict['sentiment_analytics_API'][0]['headers'],
+                                json=documents)
 
-        print("Sentiment text type", type(sentiment_text))
+        sentiment_result = response.json()
 
-        print("NOT EMPTY", sentiment_text)
-        body = [{'text': convert_to_json}]
-        data = None
-
-        print("BODY type", type(body))
-
-        params = '&to='+ 'en'
-
-        print("Params", params)
-
-        translation_result = translate_text2(translator_dict['translator_text_API'][0]['_key'], params, data, body)
-
-        print("Translated result", translation_result)
-
-        translation = ''
-        for i in translation_result[0]['translations']:
-            translation = i['text']
-            translation = str(translation).strip('[]')
-        print("Translation", translation)
-
-        #messages = [translation]
-
-        sentiment_result = sentiment_analysis(convert_to_json, 'en')
-
-        print("Score: ", sentiment_result['documents'][0]['score'])
-
-        # Formatting the score to %
-        sentiment_score = round( round(sentiment_result['documents'][0]['score'], 2) * 100 )
+        return sentiment_result
 
 
-        for i in sentiment_result['documents']:
-            score = i['score']
-            if(score >= 0.50):
-                messages = [f"This is probably a positive sentence with a {sentiment_score} % sentiment score"]
+    # Translation
+    def process_translation(sentiment_text):
+
+        if(sentiment_text is not ''):
+            messages = []
+
+            # Convert text to json
+            convert_to_json = j.dumps(sentiment_text)
+
+            print("Sentiment text type", type(sentiment_text))
+
+            body = [{'text': convert_to_json}]
+            data = None
+
+            print("BODY type", type(body))
+
+            params = '&to='+ 'en'
+
+            print("Params", params)
+
+            translation_result = translate_text_url(translator_dict['translator_text_API'][0]['_key'], params, data, body)
+
+            print("Translated result", translation_result)
+
+            translation = ''
+            for i in translation_result[0]['translations']:
+                translation = i['text']
+                translation = str(translation).strip('[]')
+            print("Translation", translation)
+
+            messages = translation
+            print("Messages", messages)
+
+            return messages
+
+        else:
+            messages = ["Invalid"]
+
+            return messages
+
+
+
+    def process_sentiment(translation, sentiment_result):
+
+        if(translation == ["Invalid"]):
+            messages = ["You need to enter a sentence. "]
+
+            return messages
+
+        elif(translation is not ''):
+
+            if(sentiment_result is not ''):
+                print("Score: ", sentiment_result['documents'][0]['score'])
+
+                # Formatting the score to %
+                sentiment_score = round( round(sentiment_result['documents'][0]['score'], 2) * 100 )
+
+
+                for i in sentiment_result['documents']:
+                    score = i['score']
+                    if(score >= 0.50):
+                        messages = [f"This is probably a positive sentence with a {sentiment_score} % sentiment score"]
+                    else:
+                        messages = [f"This is probably a negative sentence with a {sentiment_score} % sentiment score."]
+
+
+                return messages
+
             else:
-                messages = [f"This is probably a negative sentence with a {sentiment_score} % sentiment score."]
+                messages = ["No result. "]
+
+                return messages
+
+        else:
+            messages = ["You need to enter a sentence. "]
+
+            return messages
+
+    # Translate text to English
+    translation = process_translation(sentiment_text)
+
+    # Sentiment result
+    sentiment_result = sentiment_analysis(translation, 'en')
+
+    # Return sentiment result
+    messages = process_sentiment(translation, sentiment_result)
+
+    # Render result of translation to translate_url_test
+    return render_template("sentiment.html",  messages=messages)
 
 
-        return render_template("sentiment.html",  messages=messages)
+#-------------------------------------------------------------------------------------------------------------------------------------------#
+# Custom Vision Image Url
 
-    else:
-        messages = ["You need to enter a sentence. "]
 
-        return render_template("sentiment.html", messages=messages)
+@app.route("/custom_vision_url", methods=["GET", "POST"])
+
+def custom_vision_url():
+
+    image = get_image(request)
+
+    custom_vision_url = ''
+
+    ### IMPORTANT ###
+    # Add if URL text box is empty do not call the API
+    if request.form and ("custom_vision_url" in request.form):
+        custom_vision_url = request.form["custom_vision_url"]
+        print(49,'now call api with this img url', custom_vision_url)
+
+    # If it"s a GET, just return the form
+    if request.method == "GET":
+        return render_template("custom_vision_url.html", image_uri=image.uri, custom_vision_url=custom_vision_url)
+
+
+    def process_custom_vision(custom_vision_url):
+
+        if(custom_vision_url is not ''):
+
+            # Prediction API
+            prediction_credentials = ApiKeyCredentials(in_headers={"Prediction-key": prediction_key})
+            predictor = CustomVisionPredictionClient(custom_vision_endpoint, prediction_credentials)
+
+            # Create a placeholder for messages
+            messages = []
+
+            # Create a random number filename for images
+            random_number_filename = random.randint(1, 1000)
+            random_number_filename = str(random_number_filename)
+            print("Random number type: ", type(random_number_filename))
+
+            # Save image to static folder
+            test_save_image = custom_vision_render_image_url(random_number_filename, custom_vision_url)
+            saved_image_file = "/static/" + random_number_filename + ".png"
+
+            # Add your path to the static folder
+            images_folder = ''
+
+            with open(images_folder + random_number_filename + ".png", "rb") as image_contents:
+                results = predictor.classify_image(
+                    project_id, publish_iteration_name, image_contents.read())
+
+                # Display the results.
+                for prediction in results.predictions:
+                    print("\t" + prediction.tag_name +
+                        ": {0:.2f}%".format(prediction.probability * 100))
+                    messages.append(("\t" + prediction.tag_name +
+                        ": {0:.2f}%".format(prediction.probability * 100)))
+
+            print("MESSAGES", messages)
+
+            return messages
+
+        else:
+            messages = ['Please enter an image URL']
+            return messages
+
+
+    messages = process_custom_vision(custom_vision_url)
+
+    return render_template("custom_vision_url.html", image_uri=custom_vision_url, messages=messages)
+
+
+
+
+
+
+
 
 
 

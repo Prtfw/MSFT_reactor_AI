@@ -1,25 +1,30 @@
-// load env var
-require('dotenv').config({path: './../.env'})
+// Add request
+const request = require("request");
 
+// load env var
+require("dotenv").config({ path: "./../.env" });
 
 // Init express
-const express = require('express'),
-path = require('path');
+const express = require("express"),
+  path = require("path");
 
 // Multer to process upload image
-const multer  = require('multer');
+const multer = require("multer");
 
 // Filesystem module
-const fs = require('fs');
+const fs = require("fs");
 
-// Add request
-const request = require('request');
+// util module
+const util = require("util");
+
+// Add node-fetch
+const fetch = require("node-fetch");
 
 // Initialize app with express
 const app = express();
 
 // Middleware to extract data from form
-app.use(express.urlencoded())
+app.use(express.urlencoded());
 
 // Server run on port number on environment or port
 const PORT = process.env.PORT || 5000;
@@ -27,788 +32,920 @@ const PORT = process.env.PORT || 5000;
 // Run the webserver by listening to the port
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
 
-// Directory of html
-//const html_dir = './templates/';
-
-//app.use(express.static('./templates'));
-
-app.use(express.static('./public'));
-
+// Static public folder
+app.use(express.static("./public"));
 
 // Set storage engine Multer
 const storage = multer.diskStorage({
-  destination: './public/uploads/',
-  filename: function(req, file, cb){
-    cb(null, file.fieldname + '-' + Date.now() +
-    path.extname(file.originalname));
+  destination: "./public/uploads/",
+  filename: function(req, file, cb) {
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
   }
 });
 
 // Init upload Multer
 const upload = multer({
   storage: storage
-}).single('myImage')
+}).single("myImage");
 
+// Download image url to public folder
+const downloadImage = (url, path, callback) => {
+  request.head(url, (err, res, body) => {
+    request(url)
+      .pipe(fs.createWriteStream(path))
+      .on("close", callback);
+  });
+};
+
+const imageToBinary = image_path => {
+  // Process image to binary
+  const base64 = fs.readFileSync(image_path, "base64");
+  //const data = Buffer.from(base64, 'base64')
+  return Buffer.from(base64, "base64");
+};
+
+const processUrl = (urlToProcess, _params) => {
+  // Process the url for translation API call
+  var URL = require("url").URL;
+  var url = new URL(urlToProcess);
+  const { URLSearchParams } = require("url");
+  url.search = new URLSearchParams(_params).toString();
+
+  return url;
+};
 
 //* load env vars ---------------------------------------------------------------------------------
 
+const apiKey = process.env._key;
 
-const api_key = process.env._key
+const translateKey = process.env.translate_key;
 
-const translate_key = process.env.translate_key
+const sentimentKey = process.env.sentiment_key;
 
-const _sentiment_key = process.env._sentiment_key
+const baseUrl = process.env.base_url;
 
-const _base_url = process.env.base_url
-console.log(63, _base_url,api_key )
+const sentimentBaseUrl = process.env.sentiment_url;
 
-const _sentiment_url = process.env._sentiment_url
+// Custom vision key
+const training_key = process.env.training_key;
 
-COGSVCS_CLIENTURL = _base_url
-COGSVCS_KEY = api_key
+// Custom vision key
+const prediction_key = process.env.prediction_key;
 
+// Custom vision key
+const prediction_resource_id = process.env.prediction_resource_id;
+
+// Custom vision sampleProject
+const sampleProjectID = process.env.sampleProject;
+
+COGSVCS_CLIENTURL = baseUrl;
+COGSVCS_KEY = apiKey;
 
 /*API**********************************************************************************************/
 
-// Function POST API
-const fetch = require("node-fetch");
-
 // OCR API
-const text_recognition_url = _base_url + '/vision/v3.0/read/analyze'
+const textRecognitionUrl = baseUrl + "/vision/v3.0/read/analyze";
 
 // Foundation url for azure account
-const azure_base_url = _base_url //'https://maddogtest.cognitiveservices.azure.com/'
+//const azure_base_url = 'https://maddogtest.cognitiveservices.azure.com/'
+const azure_base_url = baseUrl; //'https://maddogcv.cognitiveservices.azure.com/'
 
 // Computer Vision API
-const analyze_endpoint = azure_base_url + '/vision/v3.0/analyze'
+const analyzeEndpoint = azure_base_url + "/vision/v3.0/analyze";
 
 // Cognitive API for Translator Text
-const translator_text_url = 'https://api.cognitive.microsofttranslator.com' + '/translate?api-version=3.0'
+const translatorTextUrl =
+  "https://api.cognitive.microsofttranslator.com/" +
+  "/translate?api-version=3.0";
 
 // Translation API
-let translation_endpoint = 'https://api.cognitive.microsofttranslator.com/'
+let translationUrl = "https://api.cognitive.microsofttranslator.com/";
 
 // Sentiment API
-const sentiment_url = _sentiment_url + '/text/analytics/v2.1/sentiment'
-// 'https://maddog-text-analytics.cognitiveservices.azure.com/'
-// General headers for API
-const headers = {
-    'Content-Type': 'application/json',
-    'Ocp-Apim-Subscription-Key' : api_key
-  }
+const sentimentUrl = sentimentBaseUrl + "text/analytics/v2.1/sentiment";
 
+// Headers for API call (image url)
+const jsonHeaders = {
+  "Content-Type": "application/json",
+  "Ocp-Apim-Subscription-Key": apiKey
+};
+
+// Headers for API call (upload image)
+const blobHeaders = {
+  "Content-Type": "application/octet-stream",
+  "Ocp-Apim-Subscription-Key": apiKey
+};
+
+// Translation params
+const translationParams = targetLanguage => {
+  // Params needed for translation API call
+  const params = {
+    "api-version": "3.0",
+    to: [targetLanguage]
+  };
+  return params;
+};
+
+const landmarkParams = {
+  visualFeatures: "Categories,Description,Color"
+};
+
+const objectDetectionParams = {
+  visualFeatures: "Objects,Description"
+};
+
+/*CUSTOM VISION API**********************************************************************************************/
+
+const TrainingApi = require("@azure/cognitiveservices-customvision-training");
+const PredictionApi = require("@azure/cognitiveservices-customvision-prediction");
+const msRest = require("@azure/ms-rest-js");
+const { resolveNaptr } = require("dns");
+const { json } = require("express");
+
+const setTimeoutPromise = util.promisify(setTimeout);
+
+// Keys
+const trainingKey = training_key;
+const predictionKey = prediction_key;
+const predictionResourceId = prediction_resource_id;
+
+// Root where images are stored
+const sampleDataRoot = "";
+
+// Custom vision endpoint
+const endPoint = "https://eastus.api.cognitive.microsoft.com/";
+
+const credentials = new msRest.ApiKeyCredentials({
+  inHeader: { "Training-key": trainingKey }
+});
+const trainer = new TrainingApi.TrainingAPIClient(credentials, endPoint);
+
+// Set model name
+const publishIterationName = "classifyModel";
 
 /*TRANSLATION**********************************************************************************************/
 
-let web_url = '/static/placeholder.png'
+let webUrl = "/static/placeholder.png";
 
-let image_file = '/static/placeholder.png'
+let imageFile = "/static/placeholder.png";
 
-let target_language_dictionary = [
-    {key: "English", value: 'en'},
-    {key: "Chinese (simplified)", value: 'zh-Hans'},
-    {key: "Chinese (traditional)", value: 'zh-Hant'},
-    {key: "French", value: 'fr'},
-    {key: "German", value: 'de'},
-    {key: "Italian", value: 'it'},
-    {key: "Japanese", value: 'ja'},
-    {key: "Korean", value: 'ko'},
-    {key: "Portugese", value: 'pt'},
-    {key: "Spanish", value: 'es'},
+let targetLanguageDictionary = [
+  { key: "English", value: "en" },
+  { key: "Chinese (simplified)", value: "zh-Hans" },
+  { key: "Chinese (traditional)", value: "zh-Hant" },
+  { key: "French", value: "fr" },
+  { key: "German", value: "de" },
+  { key: "Italian", value: "it" },
+  { key: "Japanese", value: "ja" },
+  { key: "Korean", value: "ko" },
+  { key: "Portugese", value: "pt" },
+  { key: "Spanish", value: "es" }
 ];
-
 
 /*EJS**********************************************************************************************/
 
 // To use extend in html, npm i express-ejs-extend
-app.engine('ejs', require('express-ejs-extend'));
+app.engine("ejs", require("express-ejs-extend"));
 
 // Set ejs
-app.set('view engine', 'ejs');
+app.set("view engine", "ejs");
 
 // Join paths with 'views'
-app.set('views', path.join(__dirname, 'views'));
+app.set("views", path.join(__dirname, "views"));
 
-app.get('/', function (req, res) {
- res.render('index');
+app.get("/", function(req, res) {
+  res.render("index");
 });
 
-
-app.get('/translate_upload', function (req, res) {
-
-  res.render('translate_upload', {target_language_dictionary: target_language_dictionary, result: '', image_file: image_file});
-  console.log("GET TRANSLATE UPLOAD IMAGE")
- });
-
-
-app.get('/translate_url', function (req, res) {
-
- res.render('translate_url', {target_language_dictionary: target_language_dictionary, result: '', web_url: image_file});
- console.log("GET TRANSLATE URL")
+app.get("/translate_upload", function(req, res) {
+  res.render("translate_upload", {
+    target_language_dictionary: targetLanguageDictionary,
+    result: "",
+    image_file: imageFile
+  });
+  console.log("GET TRANSLATE UPLOAD IMAGE");
 });
 
+app.get("/translate_url", function(req, res) {
+  res.render("translate_url", {
+    target_language_dictionary: targetLanguageDictionary,
+    result: "",
+    web_url: imageFile
+  });
+  console.log("GET TRANSLATE URL");
+});
 
-app.get('/landmark_url', function (req, res) {
+app.get("/landmark_url", function(req, res) {
+  res.render("landmark_url", { result: "", web_url: imageFile });
+  console.log("GET LANDMARK URL");
+});
 
-  res.render('landmark_url', {result: '', web_url: image_file});
-  console.log("GET LANDMARK URL")
- });
+app.get("/landmark_upload", function(req, res) {
+  res.render("landmark_upload", { result: "", image_file: imageFile });
+  console.log("GET LANDMARK URL");
+});
 
- app.get('/landmark_upload', function (req, res) {
+app.get("/object_detect_url", function(req, res) {
+  res.render("object_detect_url", { result: "", web_url: imageFile });
+  console.log("GET OBJECT DETECT URL");
+});
 
-  res.render('landmark_upload', {result: '', image_file: image_file});
-  console.log("GET LANDMARK URL")
- });
+app.get("/object_detect_upload", function(req, res) {
+  res.render("object_detect_upload", { result: "", image_file: imageFile });
+  console.log("GET OBJECT DETECT UPLOAD");
+});
 
- app.get('/object_detect_url', function (req, res) {
+app.get("/sentiment", function(req, res) {
+  res.render("sentiment", { result: "" });
+  console.log("GET SENTIMENT");
+});
 
-  res.render('object_detect_url', {result: '', web_url: image_file});
-  console.log("GET OBJECT DETECT URL")
- });
-
- app.get('/object_detect_upload', function (req, res) {
-
-  res.render('object_detect_upload', {result: '', image_file: image_file});
-  console.log("GET OBJECT DETECT UPLOAD")
- });
-
-
- app.get('/sentiment', function (req, res) {
-
-  res.render('sentiment' , {result: ''});
-  console.log("GET SENTIMENT")
- });
-
+app.get("/custom_vision_url", function(req, res) {
+  res.render("custom_vision_url", { result: "", web_url: imageFile });
+  console.log("GET CUSTOM VISION URL");
+});
 
 /*POST**********************************************************************************************/
-
 
 /*TRANSLATION UPLOAD IMAGE**********************************************************************************************/
 
 // Translation from uploaded picture
-app.post('/translate_upload', upload, async (req, res) => {
-
-  let target_language = req.body.target_language
+app.post("/translate_upload", upload, async (req, res) => {
+  // Selected target language from form
+  let targetLanguage = req.body.target_language;
 
   // Path to uploaded image
-  let image_path = req.file.path
-
+  let imagePath = req.file.path;
 
   // Process image to binary
-  const base64 =  fs.readFileSync(image_path, 'base64')
-  const data = Buffer.from(base64, 'base64')
+  let body = imageToBinary(imagePath);
 
-  // Headers
-  const headers = {
-    'Content-Type': 'application/octet-stream',
-    'Ocp-Apim-Subscription-Key' : api_key
-  }
+  // Function to extract text from image
+  const extractTextFromImage = async (endpoint, body) => {
+    // POST API call
+    const postResponse = await fetch(endpoint, {
+        method: "POST",
+        params: {
+          visualFeatures: "Categories,Description,Color",
+          details: "",
+          language: "en"
+        },
+        headers: blobHeaders,
+        body: body
+      }),
+      // Get response headers
+      responseHeaders = postResponse.headers.get(
+        "Operation-Location",
+        blobHeaders
+      );
 
- const submit_image_for_processing = async (endpoint, data) => {
+    result = {};
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    params: {
-      "visualFeatures": "Categories,Description,Color",
-      "details": "",
-      "language": "en",
-  },
-    headers: headers,
-    body: data
-  }),
+    while (true) {
+      // Add response headers
+      const getResponse = await fetch(responseHeaders, {
+        method: "GET",
+        headers: blobHeaders,
+        location: "Operation-Location"
+      });
 
-  response_headers = response.headers.get(('Operation-Location'), headers)
+      result = await getResponse.json();
 
-  result = process_text_final_response(response_headers)
+      if ("analyzeResult" in result) {
+        break;
+      }
 
-  return result
-
-}
-
-const process_text_final_response = async (response_headers) => {
-
-  result = {}
-
-  while (true){
-
-    const response2 = await fetch(response_headers,{
-      method: 'GET',
-      headers: headers,
-      location: 'Operation-Location'
-    })
-
-  result = await response2.json()
-
-  if ('analyzeResult' in result){
-    break
+      if ("status" in result && result.status == "failed") {
+        break;
+      }
     }
 
-  if('status' in result && result.status == 'failed'){
+    let result = result.analyzeResult.readResults[0].lines;
 
-    break
+    // List for extracted text
+    let extractedTextList = [];
+
+    // Loop through result and add to list
+    for (let i in result) {
+      words = result[i].text;
+      words = words.toLowerCase();
+      extractedTextList.push(words);
     }
- }
+    extractedTextList = extractedTextList.join(" ");
+    extractedTextList = JSON.stringify(extractedTextList);
 
-    result = result.analyzeResult.readResults[0].lines
-    let word_list = []
-    for(let i in result){
-      words = result[i].text
-      words = words.toLowerCase()
-      word_list.push(words)
-    }
-    word_list = word_list.join(' ')
-    word_list = JSON.stringify(word_list)
+    // Return the extracted text
+    return extractedTextList;
+  };
 
-    console.log(116, "RETURN RESULT: ", word_list)
+  // Function translated result
+  const translateResult = async extractedText => {
+    // Process the url for translation API call
+    url = processUrl(translatorTextUrl, translationParams(targetLanguage));
 
-    return word_list
-
-}
-
-    let word_list = await submit_image_for_processing(text_recognition_url, data, headers)
-    console.log("RESP,", word_list)
-
-    const _params= {
-    'api-version': '3.0',
-    'to': [target_language]
-          }
-
-    var URL = require('url').URL;
-    var url = new URL(translator_text_url)
-
-
-    const {URLSearchParams} = require('url');
-    url.search = new URLSearchParams(_params).toString();
-
-    const translation_response = await fetch(url, {
-    method: 'POST',
-    baseUrl: translation_endpoint,
-    url: 'translate',
-    params: {
-      'api-version': '3.0',
-      'to': [target_language]
-    },
-    headers: {
-      'Ocp-Apim-Subscription-Key': translate_key,
-      'Ocp-Apim-Subscription-Region': 'useast',
-      'Content-type': 'application/json',
-      'X-ClientTraceId': '315abf80-187a-4df1-89d3-bcf7f15cac36'
-    },
-    body: JSON.stringify([{
-          'text': word_list
-    }])
-    })
-
-    // Translate result
-    console.log(303, translation_response)
-    const translate_result = await translation_response.json()
-
-    // True or false for result
-    let translation_score = translate_result[0].detectedLanguage.score
-    console.log("SCORE", translate_result[0].detectedLanguage.score)
-
-    // Extract text with translated lines from translate_result
-    translate_result_to_view = translate_result[0].translations[0].text
-    console.log("TRANSLATE RESULT", translate_result[0].translations[0].text)
-
-    if(translation_score == 0){
-      translate_result_to_view = "Could not find any text to translate in the picture. "
-    }
-
-       // Render to ejs page
-    res.render('translate_upload', {
-      target_language_dictionary: target_language_dictionary,
-      result: translate_result_to_view,
-      image_file: `uploads/${req.file.filename}`,
+    const translationResponse = await fetch(url, {
+      method: "POST",
+      baseUrl: translationUrl,
+      url: "translate",
+      headers: {
+        "Ocp-Apim-Subscription-Key": translateKey,
+        "Ocp-Apim-Subscription-Region": "australiaeast",
+        "Content-type": "application/json",
+        "X-ClientTraceId": "315abf80-187a-4df1-89d3-bcf7f15cac36"
+      },
+      body: JSON.stringify([
+        {
+          text: extractedText
+        }
+      ])
     });
 
+    // Add variable to return
+    let result;
+
+    // Result with translated text
+    const translateResult = await translationResponse.json();
+
+    // True or false for result
+    let translationScore = translateResult[0].detectedLanguage.score;
+
+    if (translationScore == 1) {
+      // Extract text with translated lines from translateResult
+      result = translateResult[0].translations[0].text;
+      return result;
+    }
+
+    if (translationScore == 0) {
+      let result = "Could not find any text to translate in the picture. ";
+      return result;
+    }
+  };
+
+  // Save the extracted text from the result
+  let extractedText = await extractTextFromImage(textRecognitionUrl, body);
+
+  // Add extracted_text to translate function and save result
+  let result = await translateResult(extractedText);
+
+  // Render to ejs page
+  res.render("translate_upload", {
+    target_language_dictionary: targetLanguageDictionary,
+    result: result,
+    image_file: `uploads/${req.file.filename}`
+  });
 });
 
 /*TRANSLATE URL API**********************************************************************************************/
 
 // Post translate_url, API call
-app.post('/translate_url', async (req, res) => {
+app.post("/translate_url", async (req, res) => {
+  // Choosen target language from form
+  let targetLanguage = req.body.target_language;
 
-  let target_language = req.body.target_language
-  console.log("TARGET LANGUAGE", target_language)
+  // Pasted image url from form
+  webUrl = req.body.web_url;
+  console.log("WEB URL", webUrl);
 
-  web_url = req.body.web_url
-  console.log("WEB URL: ", web_url)
+  // Function to extract text from image
+  const extractTextFromImage = async (json, endpoint, jsonHeaders) => {
+    // If no image url is pasted
+    if (webUrl == "") {
+      webUrl = "/static/placeholder.png";
+      res.render("translate_url", {
+        target_language_dictionary: targetLanguageDictionary,
+        result: "Please add an image URL in the input field",
+        web_url: webUrl
+      });
+    } else {
+      console.log("IN ELSE");
+      console.log("WEB URL", webUrl);
 
-  if(web_url == ''){
-    web_url = '/static/placeholder.png'
-    res.render('translate_url', {target_language_dictionary: target_language_dictionary, result: 'Please add an image URL in the input field',
-    web_url: web_url});
-  }
+      // POST API call
+      const postResponse = await fetch(endpoint, {
+          method: "POST",
+          headers: jsonHeaders,
+          body: JSON.stringify({ url: json })
+        }),
+        // Save response headers in varaible
+        responseHeaders = postResponse.headers.get(
+          "Operation-Location",
+          jsonHeaders
+        );
 
-  else{
-  // Extract text from images API (OCR)
-  const submit_image_url_for_processing = async (endpoint, json, headers) => {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({'url': json})
-    }),
+      let result = {};
 
-    response_headers = response.headers.get(('Operation-Location'), headers)
+      while (true) {
+        // Add responseHeaders
+        const getResponse = await fetch(responseHeaders, {
+          method: "GET",
+          headers: jsonHeaders,
+          location: "Operation-Location"
+        });
 
-    result = process_text_final_response(response_headers)
-    return result
-  }
+        result = await getResponse.json();
 
+        if ("analyzeResult" in result) {
+          break;
+        }
 
-  const process_text_final_response = async (response_headers) => {
-    result = {}
-    while (true){
-
-      const response = await fetch(response_headers,{
-        method: 'GET',
-        headers: headers,
-        location: 'Operation-Location'
-      })
-
-    result = await response.json()
-
-    if ('analyzeResult' in result){
-      break}
-
-    if('status' in result && result.status == 'failed'){
-      break}}
-
-
-    result = result.analyzeResult.readResults[0].lines
-    let word_list = []
-    for(let i in result){
-      words = result[i].text
-      words = words.toLowerCase()
-      word_list.push(words)
-    }
-    word_list = word_list.join(' ')
-    word_list = JSON.stringify(word_list)
-
-    console.log(116, "RETURN RESULT: ", word_list)
-
-    return word_list
-
-  }
-
-let word_list = await submit_image_url_for_processing(text_recognition_url, web_url, headers)
-console.log("RESP,", word_list)
-
-
-    // Translation API, Error: { error: { code: 400036, message: 'The target language is not valid.' } }
-  const _params= {
-    'api-version': '3.0',
-    'to': [target_language]
+        if ("status" in result && result.status == "failed") {
+          break;
+        }
       }
 
-var URL = require('url').URL;
-var url = new URL(translator_text_url)
+      result = result.analyzeResult.readResults[0].lines;
 
+      // List to add extracted text
+      let extractedTextList = [];
 
-const {URLSearchParams} = require('url');
-url.search = new URLSearchParams(_params).toString();
+      // Loop through result and add to list
+      for (let i in result) {
+        words = result[i].text;
+        words = words.toLowerCase();
+        extractedTextList.push(words);
+      }
+      extractedTextList = extractedTextList.join(" ");
+      extractedTextList = JSON.stringify(extractedTextList);
 
-const translation_response = await fetch(url, {
-method: 'POST',
-baseUrl: translation_endpoint,
-url: 'translate',
-params: {
-  'api-version': '3.0',
-  'to': [target_language]
-},
-headers: {
-  'Ocp-Apim-Subscription-Key': translate_key,
-  'Ocp-Apim-Subscription-Region': 'australiaeast',
-  'Content-type': 'application/json',
-  'X-ClientTraceId': '315abf80-187a-4df1-89d3-bcf7f15cac36' // uuidv4().toString()
-},
-body: JSON.stringify([{
-      'text': word_list
-}])
-})
+      // Return the extracted text
+      return extractedTextList;
+    }
+  };
 
-// Translate result
-const translate_result = await translation_response.json()
+  // Function translated result
+  const translateResult = async extractedText => {
+    // Process the url for translation API call
+    url = processUrl(translatorTextUrl, translationParams(targetLanguage));
 
-// Extract text with translated lines from translate_result
-translate_result_to_view = translate_result[0].translations[0].text
-console.log("TRANSLATE RESULT", translate_result[0].translations[0].text)
+    const translationResponse = await fetch(url, {
+      method: "POST",
+      baseUrl: translationUrl,
+      url: "translate",
+      headers: {
+        "Ocp-Apim-Subscription-Key": translateKey,
+        "Ocp-Apim-Subscription-Region": "australiaeast",
+        "Content-type": "application/json",
+        "X-ClientTraceId": "315abf80-187a-4df1-89d3-bcf7f15cac36"
+      },
+      body: JSON.stringify([
+        {
+          text: extractedText
+        }
+      ])
+    });
 
-// Render result of translation to translate_url_test
-res.render('translate_url', {target_language_dictionary: target_language_dictionary, result: translate_result_to_view, web_url: web_url});
+    // Add variable to return
+    let result;
 
-// End of else
-}
+    // Result with translated text
+    const translateResult = await translationResponse.json();
 
+    // True or false for result
+    let translationScore = translateResult[0].detectedLanguage.score;
+
+    if (translationScore == 1) {
+      // Extract text with translated lines from translateResult
+      result = translateResult[0].translations[0].text;
+      return result;
+    }
+
+    if (translationScore == 0) {
+      let result = "Could not find any text to translate in the picture. ";
+      return result;
+    }
+  };
+
+  // Save the extracted text from the result
+  let extractedText = await extractTextFromImage(
+    webUrl,
+    textRecognitionUrl,
+    jsonHeaders
+  );
+
+  // Add extracted_text to translate function and save result
+  let result = await translateResult(extractedText);
+
+  // Render to ejs page
+  res.render("translate_url", {
+    target_language_dictionary: targetLanguageDictionary,
+    result: result,
+    web_url: webUrl
+  });
 });
-
 
 /*LANDMARK URL API**********************************************************************************************/
 
 // Post landmark_url, API call
-app.post('/landmark_url', async (req, res) => {
+app.post("/landmark_url", async (req, res) => {
+  // Web url pasted to the view
+  webUrl = req.body.web_url;
 
-  web_url = req.body.web_url
-  console.log("WEB URL: ", web_url)
+  // POST API call
+  const processLandmark = async webUrl => {
+    if (webUrl == "") {
+      webUrl = "/static/placeholder.png";
+      res.render("landmark_url", {
+        result: "Please add an image URL in the input field",
+        webUrl: webUrl
+      });
+    } else {
+      // Process URL
+      url = processUrl(analyzeEndpoint, landmarkParams);
 
-  if(web_url == ''){
-    web_url = '/static/placeholder.png'
-    res.render('landmark_url', {result: 'Please add an image URL in the input field',
-    web_url: web_url});
-  }
+      // If landmark is found
+      try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: jsonHeaders,
+            body: JSON.stringify({ url: webUrl })
+          }),
+          // Landmark result
+          landmarkResult = await response.json();
 
-  else{
+        // Filter the landmark name from landmarkResult
+        let result = landmarkResult.categories[0].detail.landmarks[0].name;
 
-    const _params= {
-      'visualFeatures': 'Categories,Description,Color'
-        }
-
-    var URL = require('url').URL;
-    var url = new URL(analyze_endpoint)
-    const {URLSearchParams} = require('url');
-    url.search = new URLSearchParams(_params).toString();
-
-    // If landmark is found
-    try {
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: headers,
-        params: {
-          'visualFeatures': 'Categories,Description,Color'},
-        body: JSON.stringify({'url': web_url})
-      }),
-
-      // Translate result
-      landmark_url_result = await response.json()
-
-
-
-      landmark_result_to_html = landmark_url_result.categories[0].detail.landmarks[0].name
-      console.log("TRANSLATE RESULT", landmark_result_to_html)
-
-      res.render('landmark_url', {result: landmark_result_to_html, web_url: web_url})
+        return result;
+      } catch (error) {
+        // Catch error and no detected landmarks
+        let result = "Could not find a result for this image";
+        return result;
       }
-
-      // Catch error and no detected landmarks
-      catch(error){
-
-        result = 'Could not find a result for this image'
-
-        res.render('landmark_url', {result: result, web_url: web_url})
-        }
     }
+  };
 
+  // Result
+  result = await processLandmark(webUrl);
+
+  // Render result to view
+  res.render("landmark_url", { result: result, web_url: webUrl });
 });
 
 /*LANDMARK UPLOAD API**********************************************************************************************/
 
-app.post('/landmark_upload', upload, async (req, res) => {
-
+app.post("/landmark_upload", upload, async (req, res) => {
   // Path to uploaded image
-  let image_path = req.file.path
+  let imagePath = req.file.path;
 
   // Process image to binary
-  const base64 =  fs.readFileSync(image_path, 'base64')
-  const data = Buffer.from(base64, 'base64')
+  let body = imageToBinary(imagePath);
 
-  // Headers
-  const headers = {
-    'Content-Type': 'application/octet-stream',
-    'Ocp-Apim-Subscription-Key' : api_key
-  }
+  const processLandmark = async body => {
+    // Process URL
+    url = processUrl(analyzeEndpoint, landmarkParams);
 
-  const _params= {
-    'visualFeatures': 'Categories,Description,Color'
+    // If landmark is found
+    try {
+      const response = await fetch(url, {
+          method: "POST",
+          headers: blobHeaders,
+          body: body
+        }),
+        // Translate result
+        landmarkResult = await response.json();
+
+      let result = landmarkResult.categories[0].detail.landmarks[0].name;
+
+      return result;
+    } catch (error) {
+      // Catch error and no detected landmarks
+      let result = "Could not find a result for this image";
+
+      return result;
     }
+  };
 
-  var URL = require('url').URL;
-  var url = new URL(analyze_endpoint)
-  const {URLSearchParams} = require('url');
-  url.search = new URLSearchParams(_params).toString();
+  // Result
+  result = await processLandmark(body);
 
-  // If landmark is found
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      params: {
-        'visualFeatures': 'Categories,Description,Color'},
-      body: data
-    }),
-
-    // Translate result
-    landmark_upload_result = await response.json()
-
-    landmark_result_to_html = landmark_upload_result.categories[0].detail.landmarks[0].name
-    console.log("TRANSLATE RESULT", landmark_result_to_html)
-
-    res.render('landmark_upload', {result: landmark_result_to_html, image_file: `uploads/${req.file.filename}`})
-    }
-
-    // Catch error and no detected landmarks
-    catch(error){
-
-      result = 'Could not find a result for this image'
-
-      res.render('landmark_upload', {result: result, image_file: `uploads/${req.file.filename}`})
-      }
-
+  // Render result to view
+  res.render("landmark_upload", {
+    result: result,
+    image_file: `uploads/${req.file.filename}`
+  });
 });
 
 /*OBJECT DETECT UPLOAD API**********************************************************************************************/
 
-// Post landmark_url, API call
-app.post('/object_detect_url', async (req, res) => {
+// Object detection image url
+app.post("/object_detect_url", async (req, res) => {
+  // Url pasted to the view
+  webUrl = req.body.web_url;
 
-  web_url = req.body.web_url
-  console.log("WEB URL: ", web_url)
+  // Object detection API call
+  const processObjectDetection = async webUrl => {
+    // If there is no url pasted to the field
+    if (webUrl == "") {
+      webUrl = "/static/placeholder.png";
+      res.render("object_detect_url", {
+        result: "Please add an image URL in the input field",
+        web_url: webUrl
+      });
+    } else {
+      // Process URL
+      url = processUrl(analyzeEndpoint, objectDetectionParams);
 
-  if(web_url == ''){
-    web_url = '/static/placeholder.png'
-    res.render('object_detect_url', {result: 'Please add an image URL in the input field',
-    web_url: web_url});
-  }
+      // If object is found
+      try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: jsonHeaders,
+            body: JSON.stringify({ url: webUrl })
+          }),
+          // Object detection result
+          responseResult = await response.json();
 
-  else{
+        console.log("RESULT: ", responseResult);
 
-    const _params= {
-      'visualFeatures': 'Objects,Description'
+        // List to add all objects from result
+        result = [];
+        resultObjects = responseResult.objects;
+
+        // Filter out all objects and add to list
+        for (i = 0; i < resultObjects.length; i++) {
+          object = resultObjects[i].object;
+          result.push(object.toUpperCase());
         }
 
-    var URL = require('url').URL;
-    var url = new URL(analyze_endpoint)
-    const {URLSearchParams} = require('url');
-    url.search = new URLSearchParams(_params).toString();
+        return result;
+      } catch (error) {
+        // Catch error and no detected objects
+        let result = "Could not find a result for this image";
 
-    // If landmark is found
-    try {
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: headers,
-        params: {
-          'visualFeatures': 'Objects,Description'},
-        body: JSON.stringify({'url': web_url})
-      }),
-
-      // Object detection result
-      object_url_result = await response.json()
-
-      console.log("RESULT: ", object_url_result)
-
-      // List to add all objects from result
-      object_to_html_list = []
-      object_url_result_to_html = object_url_result.objects
-
-      // Filter out all objects and add to list
-      for(i=0; i<object_url_result_to_html.length; i++){
-        object_to_add = object_url_result_to_html[i].object
-        object_to_html_list.push(object_to_add.toUpperCase())
+        return result;
       }
-
-      // Render result to page
-      res.render('object_detect_url', {result: object_to_html_list, web_url: web_url})
-      }
-
-      // Catch error and no detected objects
-      catch(error){
-
-        result = 'Could not find a result for this image'
-
-        res.render('object_detect_url', {result: result, web_url: web_url})
-        }
     }
+  };
 
+  // Result
+  let result = await processObjectDetection(webUrl);
+
+  // Render result to page
+  res.render("object_detect_url", { result: result, web_url: webUrl });
 });
 
 //****************************************************************************************************************************/
 // Object detection upload image
 
-app.post('/object_detect_upload', upload, async (req, res) => {
-
+app.post("/object_detect_upload", upload, async (req, res) => {
   // Path to uploaded image
-  let image_path = req.file.path
+  let imagePath = req.file.path;
 
-  // Process image to binary
-  const base64 =  fs.readFileSync(image_path, 'base64')
-  const data = Buffer.from(base64, 'base64')
+  // Object detection API call
+  const processObjectDetection = async imagePath => {
+    // Process image to binary
+    let body = imageToBinary(imagePath);
 
-  // Headers
-  const headers = {
-    'Content-Type': 'application/octet-stream',
-    'Ocp-Apim-Subscription-Key' : api_key
-  }
+    // Process URL
+    url = processUrl(analyzeEndpoint, objectDetectionParams);
 
-  const _params= {
-    'visualFeatures': 'Objects,Description'
-    }
+    // If object is found
+    try {
+      const response = await fetch(url, {
+          method: "POST",
+          headers: blobHeaders,
+          body: body
+        }),
+        // Object detection result
+        responseResult = await response.json();
+      console.log("RESULT: ", responseResult);
 
-  var URL = require('url').URL;
-  var url = new URL(analyze_endpoint)
-  const {URLSearchParams} = require('url');
-  url.search = new URLSearchParams(_params).toString();
+      // List to add all objects from result
+      result = [];
+      resultObjects = responseResult.objects;
 
-  // If landmark is found
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      params: {
-        'visualFeatures': 'Objects,Description'},
-      body: data
-    }),
-
-
-    // Object detection result
-    object_upload_result = await response.json()
-
-    console.log("RESULT: ", object_upload_result)
-
-    // List to add all objects from result
-    object_to_html_list = []
-    object_upload_objects = object_upload_result.objects
-
-    // Filter out all objects and add to list
-    for(i=0; i<object_upload_objects.length; i++){
-      object_to_add = object_upload_objects[i].object
-      object_to_html_list.push(object_to_add.toUpperCase())
-    }
-
-    console.log("LIST", object_to_html_list)
-
-
-    if(object_to_html_list == undefined || object_to_html_list.length == 0){
-      console.log("No objects")
-      result = 'No objects detected'
-
-      res.render('object_detect_upload', {result: result, image_file: `uploads/${req.file.filename}`})
-    }
-
-    else{
-      console.log("Objects detected")
-
-      res.render('object_detect_upload', {result: object_to_html_list, image_file: `uploads/${req.file.filename}`})
-  }
-    }
-
-    // Catch error and no detected landmarks
-    catch(error){
-
-      result = 'Could not find a result for this image'
-
-      res.render('object_detect_upload', {result: result, image_file: `uploads/${req.file.filename}`})
+      // Filter out all objects and add to list
+      for (i = 0; i < resultObjects.length; i++) {
+        object = resultObjects[i].object;
+        result.push(object.toUpperCase());
       }
 
+      // If no objects detected
+      if (result == undefined || result.length == 0) {
+        result = "No objects detected";
+      }
+      return result;
+    } catch (error) {
+      // Catch error
+      result = "Could not find a result for this image";
+
+      return result;
+    }
+  };
+
+  let result = await processObjectDetection(imagePath);
+
+  res.render("object_detect_upload", {
+    result: result,
+    image_file: `uploads/${req.file.filename}`
+  });
 });
 
 //****************************************************************************************************************************/
 // Sentiment analysis
 
 // Post translate_url, API call
-app.post('/sentiment', async (req, res) => {
+app.post("/sentiment", async (req, res) => {
+  sentimentText = req.body.sentiment_text;
 
-  sentiment_text = req.body.sentiment_text
+  const processTranslation = async sentimentText => {
+    if (sentimentText == "") {
+      res.render("sentiment", {
+        result: "Please add text. ",
+        sentiment_text: sentimentText
+      });
+    } else {
+      // Text to JSON
+      sentimentText = JSON.stringify(sentimentText);
 
-  if(sentiment_text == ''){
-    res.render('sentiment', { result: 'Please add text. ',
-    sentiment_text: sentiment_text});
-  }
+      // Process url
+      url = processUrl(translatorTextUrl, translationParams("en"));
 
-  else{
-    sentiment_text = JSON.stringify(sentiment_text)
+      const response = await fetch(url, {
+        method: "POST",
+        baseUrl: translationUrl,
+        url: "translate",
+        headers: {
+          "Ocp-Apim-Subscription-Key": translateKey,
+          "Ocp-Apim-Subscription-Region": "australiaeast",
+          "Content-type": "application/json",
+          "X-ClientTraceId": uuidv4().toString()
+        },
+        body: JSON.stringify([
+          {
+            text: sentimentText
+          }
+        ])
+      });
 
-  // Translation API, translate to English
-  const _params= {
-    'api-version': '3.0',
-    'to': 'en'
+      // Translate result
+      const translateResult = await response.json();
+      console.log("Translate result: ", translateResult);
+
+      try {
+        let result = "";
+
+        // Extract text with translated lines from translate_result
+        resultText = translateResult[0].translations[0].text;
+
+        // Replace characters with plain text for output
+        result = resultText
+          .replace("[", "")
+          .replace("]", "")
+          .replace('"', "")
+          .replace('"', "")
+          .replace(",", "")
+          .replace('"', "")
+          .replace('"', "");
+
+        return result;
+      } catch (error) {
+        result = `Received error: ${error}.`;
+        return result;
       }
+    }
+  };
 
-var URL = require('url').URL;
-var url = new URL(translator_text_url)
-
-
-const {URLSearchParams} = require('url');
-url.search = new URLSearchParams(_params).toString();
-
-const response = await fetch(url, {
-method: 'POST',
-baseUrl: translation_endpoint,
-url: 'translate',
-params: {
-  'api-version': '3.0',
-  'to': 'en'
-},
-headers: {
-  'Ocp-Apim-Subscription-Key': translate_key,
-  'Ocp-Apim-Subscription-Region': 'australiaeast',
-  'Content-type': 'application/json',
-  'X-ClientTraceId': '315abf80-187a-4df1-89d3-bcf7f15cac36' // uuidv4().toString()
-},
-body: JSON.stringify([{
-      'text': sentiment_text
-}])
-}).catch(err=> console.log(err))
-
-// Translate result
-const translate_result = await response.json()
-console.log(754, translate_result)
-
-// Extract text with translated lines from translate_result
-translate_result_to_html = translate_result[0].translations[0].text
-
-
-// Replace characters with plain text for output
-translate_text = translate_result_to_html.replace("[","").replace("]","").
-replace('"','').replace('"','').replace(',','').replace('"','').replace('"','')
-
-console.log(765, sentiment_url)
-
-// Sentiment API
-  const sentiment_response = await fetch(sentiment_url, {
-    method: 'POST',
-    headers: {
-      'Ocp-Apim-Subscription-Key': _sentiment_key,
-      'Content-type': 'application/json',
-      'Ocp-Apim-Subscription-Region': 'eastus',
-      'X-ClientTraceId': '35ddc2ff-b916-43b0-a09f-1ee18fe8f0df' //uuidv4().toString()
+  const processSentiment = async translateText => {
+    // Sentiment API
+    const response = await fetch(sentimentUrl, {
+      method: "POST",
+      headers: {
+        "Ocp-Apim-Subscription-Key": sentimentKey,
+        "Content-type": "application/json",
+        "Ocp-Apim-Subscription-Region": "australiaeast",
+        "X-ClientTraceId": "35ddc2ff-b916-43b0-a09f-1ee18fe8f0df" //uuidv4().toString()
       },
-      body: JSON.stringify
-      (
-        {"documents": [
-        {"id": "1", "language": 'en',
-            "text": translate_text}
-                  ]
-                }
-      )
-  }).catch(err=>console.log(err))
+      body: JSON.stringify({
+        documents: [{ id: "1", language: "en", text: translateText }]
+      })
+    });
 
-  const sentiment_result = await sentiment_response.json()
+    const sentimentResult = await response.json();
 
-  let result_text = ''
+    try {
+      let result = "";
 
-  sentiment_score = sentiment_result.documents[0].score.toFixed(2) * 100
+      sentimentScore = sentimentResult.documents[0].score.toFixed(2) * 100;
 
-  if(sentiment_score >= 50){
+      if (sentimentScore >= 50) {
+        result = `This is probably a positive sentence with a ${sentimentScore} % sentiment score.`;
 
-    result_text = `This is probably a positive sentence with a ${sentiment_score} % sentiment score.`
+        return Promise.resolve(result);
+      } else {
+        result = `This is probably a negative sentence with a ${sentimentScore} % sentiment score.`;
 
+        return result;
+      }
+    } catch (err) {
+      return err;
+    }
+  };
 
-  }
-  else{
+  // Translate text to English
+  let translateText = await processTranslation(sentimentText);
 
-    result_text = result_text = `This is probably a negative sentence with a ${sentiment_score} % sentiment score.`
-
-  }
-
+  // Return sentiment result
+  let result = await processSentiment(translateText);
 
   // Render result of translation to translate_url_test
-  res.render('sentiment', { result: result_text, sentiment_text: sentiment_text});
-}
-
+  res.render("sentiment", { result: result, sentiment_text: sentimentText });
 });
 
+/*CUSTOM VISION URL API**********************************************************************************************/
 
+// Custom Vision image url API call
+app.post("/custom_vision_url", async (req, res) => {
+  webUrl = req.body.web_url;
+  console.log("WEB URL: ", webUrl);
 
+  const processCustomVision = async webUrl => {
+    // If no url is added
+    if (webUrl == "") {
+      webUrl = "/static/placeholder.png";
 
+      result = "Please add an image URL in the input field";
+
+      res.render("custom_vision_url", {
+        result: "Please add an image URL in the input field",
+        web_url: webUrl
+      });
+    } else {
+      // Create filename for folder
+      let randomFilename = Math.floor(Math.random() * 101);
+      randomFilename = randomFilename.toString();
+
+      // Image path
+      const imagePath = "./public/uploads/" + randomFilename + ".png";
+
+      // Download image to folder
+      downloadImage(webUrl, imagePath, () => {
+        console.log("Image downloaded at: ", imagePath);
+
+        try {
+          (async () => {
+            // Predictor API
+            const predictorCredentials = new msRest.ApiKeyCredentials({
+              inHeader: { "Prediction-key": predictionKey }
+            });
+            const predictor = new PredictionApi.PredictionAPIClient(
+              predictorCredentials,
+              endPoint
+            );
+
+            // Uploaded image
+            const publicImageFolderRoot = "./public/uploads/";
+            const uploadedImage = fs.readFileSync(
+              `${publicImageFolderRoot}/${randomFilename}.png`
+            );
+
+            const results = await predictor.classifyImage(
+              sampleProjectID,
+              publishIterationName,
+              uploadedImage
+            );
+
+            // Results
+            console.log("Results:");
+
+            // List to push results
+            messages = [];
+
+            // Predictions from your model
+            results.predictions.forEach(predictedResult => {
+              console.log(
+                `\t ${predictedResult.tagName}: ${(
+                  predictedResult.probability * 100.0
+                ).toFixed(2)}%`
+              );
+              messages.push(
+                `\t ${predictedResult.tagName}: ${(
+                  predictedResult.probability * 100.0
+                ).toFixed(2)}%`
+              );
+            });
+
+            // Render results to view
+            res.render("custom_vision_url", {
+              result: messages,
+              web_url: webUrl
+            });
+          })();
+        } catch (err) {
+          messages = `Something went wrong: ${err}`;
+
+          res.render("custom_vision_url", {
+            result: messages,
+            web_url: webUrl
+          });
+        }
+      });
+    }
+  };
+
+  // Call function and use custom vision
+  await processCustomVision(webUrl);
+});
